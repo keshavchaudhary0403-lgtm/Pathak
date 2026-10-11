@@ -452,3 +452,12 @@ a.stat{transition:transform .2s}
 .qc.snipcard{padding-top:16px}
 .qc.snipcard::before{background:var(--grad)}
 .qc.snipcard img{width:100%;border-radius:12px;background:#fff;border:1px solid var(--line);display:block}
+
+/* simplified library header */
+.lib-top.one{grid-template-columns:1fr}
+.lib-stats{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.lib-stats>*{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-size:13.5px;color:var(--muted);text-decoration:none}
+.lib-stats b{color:var(--ink);font-variant-numeric:tabular-nums}
+.lib-stats svg.i{width:16px;height:16px;color:var(--a2)}
+.lib-stats a:hover{border-color:var(--a3);color:var(--ink)}
+@media (max-width:480px){.lib-stats{flex-wrap:nowrap;gap:6px}.lib-stats>*{padding:7px 10px;font-size:12.5px;gap:5px;white-space:nowrap}}

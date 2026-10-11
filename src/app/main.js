@@ -65,7 +65,6 @@ const S = {
   covers: new Map(),
   libSort: 'recent',
   libQuery: '',
-  nb: { q: '', book: 'all', color: 'all' },
   cardsView: { q: '', book: 'all' },
 };
 
@@ -83,6 +82,14 @@ async function loadAll() {
     const t = cleanTitle(b.title, b.fileName);
     const a = cleanAuthor(b.author);
     if (t !== b.title || a !== (b.author || '')) { b.title = t; b.author = a; await db.put('books', b); }
+  }
+  for (const c of [...S.cards]) {
+    const h = c.highlightId && S.highlights.find((x) => x.id === c.highlightId);
+    if (h) {
+      if (c.note && !h.note) { h.note = c.note; await db.put('highlights', h); }
+      await db.del('cards', c.id);
+      S.cards = S.cards.filter((x) => x.id !== c.id);
+    }
   }
   for (const c of S.cards) {
     if (c.text == null) {
@@ -297,7 +304,7 @@ function currentRoute() {
   const parts = path.split('/');
   const params = new URLSearchParams(query || '');
   if (parts[0] === 'read' && parts[1]) return { name: 'read', id: parts[1], params };
-  if (parts[0] === 'notebook') return { name: 'notebook', params };
+  if (parts[0] === 'notebook') return { name: 'cards', params };
   if (parts[0] === 'cards' || parts[0] === 'review') return { name: 'cards', params };
   return { name: 'library', params };
 }
@@ -315,10 +322,8 @@ async function route() {
   if (R.active) await closeReader(false);
   lastShellRoute = location.hash || '#/library';
   $$('.tab').forEach((t) => t.setAttribute('aria-current', t.dataset.tab === r.name ? 'page' : 'false'));
-  if (r.name === 'notebook') {
-    if (r.params.get('book')) S.nb.book = r.params.get('book');
-    renderNotebook();
-  } else if (r.name === 'cards') renderCards();
+  if (r.name === 'cards' && r.params.get('book')) S.cardsView.book = r.params.get('book');
+  if (r.name === 'cards') renderCards();
   else renderLibrary();
   updateBadges();
   window.scrollTo(0, 0);
@@ -371,8 +376,8 @@ function renderLibrary() {
   const v = $('#view');
   const recent = [...S.books].filter((b) => b.lastOpened).sort((a, b) => b.lastOpened - a.lastOpened)[0];
   const st = streak();
-  const top = `
-    <div class="lib-top">
+  const top = !recent ? '' : `
+    <div class="lib-top one">
       ${recent ? `<button class="continue glass" type="button" data-open="${recent.id}">
         ${coverHTML(recent)}
         <div class="info">
@@ -382,12 +387,11 @@ function renderLibrary() {
           <span class="pbar"><i style="width:${pct(recent.progress)}"></i></span>
         </div>
       </button>` : ''}
-      <div class="stats" style="${recent ? '' : 'grid-column:1/-1'}">
-        <button class="stat glass clk" type="button" ${recent ? `data-open="${recent.id}" title="Keep your streak going"` : 'data-add'}><span class="ic" style="background:linear-gradient(135deg,var(--a1),var(--a2))">${icon('flame')}</span><b>${st}</b><span>day streak</span></button>
-        <button class="stat glass clk" type="button" ${recent ? `data-open="${recent.id}" title="Continue reading"` : 'data-add'}><span class="ic" style="background:linear-gradient(135deg,var(--ok),#0EA5E9)">${icon('clock')}</span><b>${minutesToday()}</b><span>min today</span></button>
-        <a class="stat glass" href="#/cards"><span class="ic" style="background:linear-gradient(135deg,var(--a3),var(--a2))">${icon('cards')}</span><b>${S.cards.length}</b><span>cards saved</span></a>
-        <div class="heatcard glass"><div class="row"><span>Reading activity</span><span>${minutesThisWeek()} min this week</span></div>${heatmapHTML()}</div>
-      </div>
+    </div>
+    <div class="lib-stats">
+      <span>${icon('flame')}<b>${st}</b> day streak</span>
+      <span>${icon('clock')}<b>${minutesToday()}</b> min today</span>
+      <a href="#/cards">${icon('cards')}<b>${savedItems().length}</b> cards</a>
     </div>`;
 
   const books = sortedBooks();
@@ -440,7 +444,7 @@ $('#view').addEventListener('click', (e) => {
     const b = bookById(more.dataset.more);
     openMenu(more, [
       { icon: 'book', label: b.progress > 0 ? 'Continue reading' : 'Start reading', run: () => go(`#/read/${b.id}`) },
-      { icon: 'notes', label: 'Highlights', run: () => { S.nb.book = b.id; go('#/notebook'); } },
+      { icon: 'cards', label: 'Saved cards', run: () => { S.cardsView.book = b.id; go('#/cards'); } },
       { icon: 'edit', label: 'Edit title and author', run: () => editBookDialog(b) },
       { icon: 'check', label: b.progress >= 0.995 ? 'Mark as unread' : 'Mark as finished', run: async () => { b.progress = b.progress >= 0.995 ? 0 : 1; if (!b.progress) b.position = null; await db.put('books', b); renderLibrary(); } },
       { icon: 'trash', label: 'Remove from library', danger: true, confirm: 'Tap again to remove', run: async () => {
@@ -476,101 +480,6 @@ function editBookDialog(b) {
   sh.addEventListener('keydown', (e) => { if (e.key === 'Enter') sh.querySelector('[data-x="save"]').click(); });
 }
 
-/* ---------- notebook ---------- */
-function filteredHighlights() {
-  const q = S.nb.q.trim().toLowerCase();
-  return S.highlights.filter((h) =>
-    (S.nb.book === 'all' || h.bookId === S.nb.book) &&
-    (S.nb.color === 'all' || h.color === S.nb.color) &&
-    (!q || h.text.toLowerCase().includes(q) || (h.note || '').toLowerCase().includes(q)));
-}
-function hlCardHTML(h, showBook = false) {
-  const b = bookById(h.bookId);
-  const hasCard = S.cards.some((c) => c.highlightId === h.id);
-  return `<div class="hlc glass" style="--c:${HL_COLORS[h.color]?.fill}" data-h="${h.id}">
-    <q class="clk" data-act="open" title="Open in book">${esc(h.text)}</q>
-    ${h.note ? `<div class="note">${esc(h.note)}</div>` : ''}
-    <div class="foot"><span>${showBook && b ? esc(b.title) + ' · ' : ''}${esc(h.chapter || '')}${h.chapter ? ' · ' : ''}${relTime(h.createdAt)}</span>
-      <span class="acts">
-        <button class="ib" type="button" data-act="open" aria-label="Open in book" title="Open in book">${icon('open')}</button>
-        <button class="ib" type="button" data-act="note" aria-label="Edit note" title="Note">${icon('note')}</button>
-        <button class="ib" type="button" data-act="card" aria-label="${hasCard ? 'Remove from Cards' : 'Save to Cards'}" title="${hasCard ? 'In Cards' : 'Save to Cards'}" style="${hasCard ? 'color:var(--a3)' : ''}">${icon('cards')}</button>
-        <button class="ib" type="button" data-act="del" aria-label="Delete highlight" title="Delete">${icon('trash')}</button>
-      </span></div>
-  </div>`;
-}
-function renderNotebook() {
-  const v = $('#view');
-  if (S.nb.book !== 'all' && !bookById(S.nb.book)) S.nb.book = 'all';
-  const list = filteredHighlights();
-  const booksWith = S.books.filter((b) => S.highlights.some((h) => h.bookId === b.id));
-  const groups = new Map();
-  list.sort((a, b) => b.createdAt - a.createdAt).forEach((h) => {
-    if (!groups.has(h.bookId)) groups.set(h.bookId, []);
-    groups.get(h.bookId).push(h);
-  });
-  v.innerHTML = `
-    <div class="view-head"><h1>Notebook</h1>
-      <button class="btn soft" type="button" id="nbExport" ${S.highlights.length ? '' : 'disabled'}>${icon('download')}Export</button></div>
-    ${S.highlights.length ? `<div class="toolbar">
-      <label class="search">${icon('search')}<input class="input" id="nbSearch" type="search" placeholder="Search highlights and notes" value="${esc(S.nb.q)}" aria-label="Search highlights"></label>
-      ${dropdownHTML('nbBook', [['all', 'All books'], ...booksWith.map((b) => [b.id, b.title])], S.nb.book, 'Book')}
-      <div class="chips" role="group" aria-label="Colour">
-        <button class="chip" type="button" data-color="all" aria-pressed="${S.nb.color === 'all'}">All</button>
-        ${Object.entries(HL_COLORS).map(([k, c]) => `<button class="chip" type="button" data-color="${k}" aria-pressed="${S.nb.color === k}" aria-label="${c.label}"><i style="--c:${c.fill}"></i>${c.label}</button>`).join('')}
-      </div></div>` : ''}
-    <div id="nbBody">
-      ${!S.highlights.length ? `<div class="empty" style="margin-top:10px"><span class="big">${icon('notes')}</span><h2>No highlights yet</h2><p>Select text while reading to highlight it. Everything you mark shows up here.</p><a class="btn soft" href="#/library">Go to library</a></div>`
-        : !list.length ? '<p class="muted" style="margin-top:24px">Nothing matches these filters.</p>'
-        : [...groups.entries()].map(([bid, hs]) => {
-          const b = bookById(bid);
-          if (!b) return '';
-          const cu = coverURL(b);
-          return `<div class="nb-group"><h3><button class="nb-book clk" type="button" data-open="${b.id}" title="Open ${esc(b.title)}">${cu ? `<img src="${cu}" alt="">` : `<span class="mini" style="background:${gradFor(b.title)}"></span>`}<span>${esc(b.title)} <small>${plural(hs.length, 'highlight')}</small></span></button></h3>
-            <div class="nb-list">${hs.map((h) => hlCardHTML(h)).join('')}</div></div>`;
-        }).join('')}
-    </div>`;
-
-  $('#nbSearch')?.addEventListener('input', (e) => { S.nb.q = e.target.value; refreshNbBody(); });
-  bindDropdown('nbBook', [['all', 'All books'], ...booksWith.map((b) => [b.id, b.title])], S.nb.book, (v) => { S.nb.book = v; renderNotebook(); });
-  $$('[data-color]').forEach((c) => c.addEventListener('click', () => { S.nb.color = c.dataset.color; renderNotebook(); }));
-  $('#nbExport')?.addEventListener('click', exportMarkdown);
-}
-function refreshNbBody() {
-  const pos = $('#nbSearch')?.selectionStart;
-  renderNotebook();
-  const s = $('#nbSearch');
-  if (s) { s.focus(); s.setSelectionRange(pos, pos); }
-}
-$('#view').addEventListener('click', async (e) => {
-  const btn = e.target.closest('.hlc [data-act]');
-  if (!btn) return;
-  const h = S.highlights.find((x) => x.id === btn.closest('.hlc').dataset.h);
-  if (!h) return;
-  const act = btn.dataset.act;
-  if (act === 'open') go(`#/read/${h.bookId}?h=${h.id}`);
-  if (act === 'note') noteDialog(h, saveHighlight, () => renderNotebook());
-  if (act === 'card') { await toggleCardFor(h); renderNotebook(); }
-  if (act === 'del') { await deleteHighlight(h); renderNotebook(); }
-});
-
-function exportMarkdown() {
-  const lines = ['# Pathak highlights', '', `Exported ${new Date().toLocaleDateString()}`, ''];
-  const byBook = new Map();
-  filteredHighlights().forEach((h) => { if (!byBook.has(h.bookId)) byBook.set(h.bookId, []); byBook.get(h.bookId).push(h); });
-  for (const [bid, hs] of byBook) {
-    const b = bookById(bid);
-    lines.push(`## ${b?.title || 'Unknown book'}${b?.author ? ` · ${b.author}` : ''}`, '');
-    hs.sort((a, c) => (a.progress || 0) - (c.progress || 0)).forEach((h) => {
-      lines.push(`> ${h.text.replace(/\n+/g, ' ')}`);
-      if (h.note) lines.push('', `**Note:** ${h.note}`);
-      if (h.chapter) lines.push('', `*${h.chapter}*`);
-      lines.push('');
-    });
-  }
-  download(new Blob([lines.join('\n')], { type: 'text/markdown' }), `pathak-highlights-${today()}.md`);
-}
-
 /* ---------- highlights, notes and cards ---------- */
 async function saveHighlight(h) {
   await db.put('highlights', h);
@@ -582,7 +491,7 @@ async function deleteHighlight(h, quiet = false) {
   await db.del('highlights', h.id);
   S.highlights = S.highlights.filter((x) => x.id !== h.id);
   if (R.active && R.book?.id === h.bookId) { R.reader.undraw(h.id); R.reader.setHighlights(R.bookHighlights()); }
-  if (!quiet) toast('Highlight deleted', { label: 'Undo', run: async () => { await saveHighlight(h); if (currentRoute().name === 'notebook') renderNotebook(); } });
+  if (!quiet) toast('Highlight removed', { label: 'Undo', run: async () => { await saveHighlight(h); refreshCurrent(); } });
 }
 
 function noteDialog(h, saver = saveHighlight, after) {
@@ -617,26 +526,7 @@ async function deleteCard(c, quiet = false) {
 function refreshCurrent() {
   const n = currentRoute().name;
   if (n === 'cards') renderCards();
-  else if (n === 'notebook') renderNotebook();
   else if (n === 'library') renderLibrary();
-}
-// Save a highlight's passage as a card. Keeps its own copy so the card survives if the highlight is removed.
-async function cardFromHighlight(h) {
-  const existing = S.cards.find((c) => c.highlightId === h.id);
-  if (existing) return { card: existing, created: false };
-  const { id, ...anchor } = h;
-  const card = {
-    ...anchor, id: uid(), kind: 'quote', highlightId: h.id,
-    text: h.text, note: h.note || '', createdAt: Date.now(),
-  };
-  await putCard(card);
-  return { card, created: true };
-}
-async function toggleCardFor(h) {
-  const existing = S.cards.find((c) => c.highlightId === h.id);
-  if (existing) { await deleteCard(existing); return; }
-  await cardFromHighlight(h);
-  toast('Saved to Cards', { label: 'View', run: () => go('#/cards') });
 }
 
 /* ---------- dictionary ---------- */
@@ -713,11 +603,9 @@ async function openReader(id, jumpHighlight) {
   document.body.style.overflow = 'hidden';
   applyReaderChrome();
   $('#rTitle').textContent = b.title;
+  $('[data-r="save"]').innerHTML = `${icon(b.type === 'pdf' ? 'crop' : 'plus')}${b.type === 'pdf' ? 'Save part' : 'Save card'}`;
   $('#rChapter').textContent = b.author || '';
   $('#rLoading').hidden = false;
-  $('[data-r="zoomin"]').hidden = b.type !== 'pdf';
-  $('[data-r="snip"]').hidden = b.type !== 'pdf';
-  $('[data-r="zoomout"]').hidden = b.type !== 'pdf';
   b.lastOpened = Date.now();
   db.put('books', b);
 
@@ -1011,7 +899,6 @@ function popHTML(activeColor, existing) {
     <span class="sep"></span>
     <button class="pb" type="button" data-p="note">${icon('note')}Note</button>
     ${existing ? '' : `<button class="pb" type="button" data-p="define">${icon('define')}Define</button>`}
-    <button class="pb" type="button" data-p="card">${icon('cards')}Card</button>
     <button class="pb" type="button" data-p="copy">${icon('copy')}Copy</button>
     ${existing ? `<button class="pb" type="button" data-p="del">${icon('trash')}Delete</button>` : ''}`;
 }
@@ -1041,17 +928,17 @@ function onSelect(sel) {
     if (b.dataset.c) {
       await saveHighlight(makeHighlight(sel, b.dataset.c));
       sel.clear(); closePop();
+      savedToast();
       return;
     }
     const p = b.dataset.p;
     if (p === 'copy') { copyText(sel.text); sel.clear(); closePop(); }
     if (p === 'define') { const w = sel.text.split(/\s+/)[0]; sel.clear(); closePop(); defineSheet(w, { bookId: R.book.id, text: sel.text }); }
-    if (p === 'note' || p === 'card') {
+    if (p === 'note') {
       const h = makeHighlight(sel, 'yellow');
       await saveHighlight(h);
       sel.clear(); closePop();
-      if (p === 'note') noteDialog(h);
-      else { await cardFromHighlight(h); toast('Saved to Cards', { label: 'View', run: () => { closeReader(false).then(() => go('#/cards')); } }); }
+      noteDialog(h);
     }
   });
 }
@@ -1074,10 +961,6 @@ function onHighlightClick(id, rect) {
     closePop();
     if (p === 'copy') copyText(h.text);
     if (p === 'note') noteDialog(h);
-    if (p === 'card') {
-      const { created } = await cardFromHighlight(h);
-      toast(created ? 'Saved to Cards' : 'Already in Cards', { label: 'View', run: () => { closeReader(false).then(() => go('#/cards')); } });
-    }
     if (p === 'del') deleteHighlight(h);
   });
 }
@@ -1173,18 +1056,16 @@ function snipPreview({ blob, w, h, page, rel }) {
   });
 }
 
+const savedToast = () => toast('Saved to Cards', { label: 'View', run: () => { closeReader(false).then(() => go('#/cards')); } });
 async function saveCardFromBar() {
   if (pop?.sel) {
     const sel = pop.sel;
-    const h = makeHighlight(sel, 'yellow');
-    await saveHighlight(h);
-    await cardFromHighlight(h);
+    await saveHighlight(makeHighlight(sel, 'yellow'));
     sel.clear(); closePop();
-    toast('Saved to Cards', { label: 'View', run: () => { closeReader(false).then(() => go('#/cards')); } });
+    savedToast();
   } else if (pop?.h) {
-    const { created } = await cardFromHighlight(pop.h);
     closePop();
-    toast(created ? 'Saved to Cards' : 'Already in Cards');
+    toast('Already in Cards');
   } else {
     if (R.reader?.kind === 'pdf') startSnip();
     else toast('Select a sentence or section, then tap Save card');
@@ -1201,9 +1082,17 @@ function tidyQuote(t) {
   if (/[”’"]$/.test(text) && closes > opens) text = text.slice(0, -1).trim();
   return text;
 }
+// Everything you've saved: highlighted passages plus word and snip cards.
+function savedItems() {
+  return [...S.highlights.map((h) => ({ ...h, kind: 'highlight' })), ...S.cards];
+}
+function findSaved(id) {
+  const h = S.highlights.find((x) => x.id === id);
+  return h ? { item: h, isHl: true } : { item: S.cards.find((x) => x.id === id), isHl: false };
+}
 function filteredCards() {
   const q = S.cardsView.q.trim().toLowerCase();
-  return S.cards
+  return savedItems()
     .filter((c) => (S.cardsView.book === 'all' || c.bookId === S.cardsView.book) &&
       (!q || [c.text, c.note, c.meaning, c.translation].some((x) => (x || '').toLowerCase().includes(q))))
     .sort((a, b) => b.createdAt - a.createdAt);
@@ -1251,16 +1140,17 @@ function renderCards() {
   const v = $('#view');
   if (S.cardsView.book !== 'all' && !bookById(S.cardsView.book)) S.cardsView.book = 'all';
   const list = filteredCards();
-  const booksWith = S.books.filter((b) => S.cards.some((c) => c.bookId === b.id));
+  const all = savedItems();
+  const booksWith = S.books.filter((b) => all.some((c) => c.bookId === b.id));
   v.innerHTML = `
-    <div class="view-head"><h1>Cards <span class="muted" style="font-weight:500;font-size:.6em">${S.cards.length || ''}</span></h1>
-      ${S.cards.length ? `<button class="btn soft" type="button" id="cardsExport">${icon('download')}Export</button>` : ''}</div>
-    ${S.cards.length ? `<div class="toolbar" style="margin-bottom:20px">
+    <div class="view-head"><h1>Cards <span class="muted" style="font-weight:500;font-size:.6em">${all.length || ''}</span></h1>
+      ${all.length ? `<button class="btn soft" type="button" id="cardsExport">${icon('download')}Export</button>` : ''}</div>
+    ${all.length ? `<div class="toolbar" style="margin-bottom:20px">
       <label class="search">${icon('search')}<input class="input" id="cardsSearch" type="search" placeholder="Search cards" value="${esc(S.cardsView.q)}" aria-label="Search cards"></label>
       ${dropdownHTML('cardsBook', [['all', 'All books'], ...booksWith.map((b) => [b.id, b.title])], S.cardsView.book, 'Book')}
     </div>` : ''}
-    ${!S.cards.length
-      ? `<div class="empty" style="margin-top:10px"><span class="big">${icon('cards')}</span><h2>Save the lines that matter</h2><p>While reading, select a sentence or a whole section and tap <b>Card</b>. Words you look up can be saved here too.</p><a class="btn soft" href="#/library">Go to library</a></div>`
+    ${!all.length
+      ? `<div class="empty" style="margin-top:10px"><span class="big">${icon('cards')}</span><h2>Save the lines that matter</h2><p>While reading, select a sentence or section and pick a colour, or tap <b>Save card</b>. It shows up here.</p><a class="btn soft" href="#/library">Go to library</a></div>`
       : list.length ? `<div class="qgrid">${list.map(cardHTML).join('')}</div>` : '<p class="muted">No cards match your search.</p>'}`;
   $('#cardsSearch')?.addEventListener('input', (e) => {
     S.cardsView.q = e.target.value;
@@ -1275,14 +1165,15 @@ function renderCards() {
 $('#view').addEventListener('click', async (e) => {
   const btn = e.target.closest('.qc [data-cact]');
   if (!btn) return;
-  const c = S.cards.find((x) => x.id === btn.closest('.qc').dataset.card);
+  const { item: c, isHl } = findSaved(btn.closest('.qc').dataset.card);
   if (!c) return;
   const a = btn.dataset.cact;
   if (a === 'open') {
-    if (c.highlightId && S.highlights.some((h) => h.id === c.highlightId)) go(`#/read/${c.bookId}?h=${c.highlightId}`);
+    if (isHl) go(`#/read/${c.bookId}?h=${c.id}`);
+    else if (c.highlightId && S.highlights.some((h) => h.id === c.highlightId)) go(`#/read/${c.bookId}?h=${c.highlightId}`);
     else go(`#/read/${c.bookId}?c=${c.id}`);
   }
-  if (a === 'note') noteDialog(c, putCard, () => renderCards());
+  if (a === 'note') noteDialog(c, isHl ? saveHighlight : putCard, () => renderCards());
   if (a === 'copy') {
     if (c.kind === 'image') {
       try { await navigator.clipboard.write([new ClipboardItem({ [c.image.type || 'image/png']: c.image })]); toast('Image copied'); }
@@ -1290,7 +1181,13 @@ $('#view').addEventListener('click', async (e) => {
     } else copyText(c.kind === 'word' ? [c.text, c.translation, c.meaning].filter(Boolean).join(' — ') : c.text);
   }
   if (a === 'share') shareImage(c);
-  if (a === 'del') { await deleteCard(c); renderCards(); }
+  if (a === 'del') {
+    if (isHl) {
+      await deleteHighlight(c, true);
+      toast('Removed from Cards', { label: 'Undo', run: async () => { await saveHighlight(c); refreshCurrent(); } });
+    } else await deleteCard(c);
+    renderCards();
+  }
 });
 function exportCards() {
   const lines = ['# Pathak cards', ''];

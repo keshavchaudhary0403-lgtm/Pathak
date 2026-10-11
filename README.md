@@ -6,9 +6,8 @@ A free e-reader that runs in the browser. Live at https://pathak-woad.vercel.app
 - Library for EPUB and PDF: import by button or drag and drop, covers, progress, continue reading
 - EPUB reader: pages or scroll, swipe and arrow keys, contents, 4 page themes, 5 typefaces, size, spacing, margins, time left in chapter
 - PDF reader: continuous scroll, zoom, outline, selectable text
-- Highlights in 4 colours, notes, copy
+- Highlight in 4 colours: every highlight is saved to Cards, with an optional note
 - Dictionary: English meaning with Hindi word, and Hindi to English
-- Notebook: search, filter, Markdown export
 - Cards: save important sentences, sections or words; search, notes, export, share as image
 - PDF snip: drag over any part of a page (works on scanned PDFs) to save it as an image card
 - Reading streak, minutes read, activity heatmap
