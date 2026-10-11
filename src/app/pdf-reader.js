@@ -107,6 +107,59 @@ export async function openPdf({ book, blob, host, settings, highlights, on }) {
   }
   scroller.addEventListener('scroll', onScroll, { passive: true });
 
+  // Trackpad: pinch (ctrl+wheel, or Safari gesture events) zooms; a horizontal swipe turns the page.
+  const zoomOf = (z) => (z === 'fit' ? 1 : Number(z) || 1);
+  let pinch = null;
+  let pinchT = 0;
+  function previewZoom(target, cx, cy) {
+    const cur = zoomOf(current.pdfZoom);
+    pinch = Math.min(4, Math.max(0.5, target));
+    const cr = column.getBoundingClientRect();
+    column.style.transformOrigin = `${cx - cr.left}px ${cy - cr.top}px`;
+    column.style.transform = `scale(${pinch / cur})`;
+    clearTimeout(pinchT);
+    pinchT = setTimeout(commitZoom, 200);
+  }
+  function commitZoom() {
+    if (pinch == null) return;
+    const z = pinch;
+    pinch = null;
+    column.style.transform = '';
+    const val = Math.abs(z - 1) < 0.05 ? 'fit' : String(Math.round(z * 100) / 100);
+    if (val === current.pdfZoom) return;
+    current = { ...current, pdfZoom: val };
+    relayout();
+    on.zoomChange?.(val);
+  }
+  let swipeAcc = 0;
+  let lastWheel = 0;
+  let swipeLocked = false;
+  scroller.addEventListener('wheel', (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      previewZoom((pinch ?? zoomOf(current.pdfZoom)) * Math.exp(-e.deltaY * 0.01), e.clientX, e.clientY);
+      return;
+    }
+    if (Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.3) {
+      e.preventDefault();
+      const now = Date.now();
+      const gap = now - lastWheel;
+      lastWheel = now;
+      if (gap > 300) swipeAcc = 0;
+      if (swipeLocked) { if (gap < 200) return; swipeLocked = false; swipeAcc = 0; }
+      swipeAcc += e.deltaX;
+      if (Math.abs(swipeAcc) > 60) {
+        goTo({ page: curPage + (swipeAcc > 0 ? 1 : -1) });
+        swipeAcc = 0;
+        swipeLocked = true;
+      }
+    }
+  }, { passive: false });
+  let gestureStart = 1;
+  scroller.addEventListener('gesturestart', (e) => { e.preventDefault(); gestureStart = zoomOf(current.pdfZoom); });
+  scroller.addEventListener('gesturechange', (e) => { e.preventDefault(); previewZoom(gestureStart * e.scale, e.clientX, e.clientY); });
+  scroller.addEventListener('gestureend', (e) => { e.preventDefault(); clearTimeout(pinchT); commitZoom(); });
+
   // Highlights: drawn below the text layer, hit-tested on click.
   function draw(h) {
     const p = pages[h.page - 1];
@@ -217,8 +270,8 @@ export async function openPdf({ book, blob, host, settings, highlights, on }) {
     toc,
     pages: n,
     locationsReady: true,
-    next: () => scroller.scrollBy({ top: scroller.clientHeight * 0.9, behavior: 'smooth' }),
-    prev: () => scroller.scrollBy({ top: -scroller.clientHeight * 0.9, behavior: 'smooth' }),
+    next: () => goTo({ page: curPage + 1 }),
+    prev: () => goTo({ page: curPage - 1 }),
     goTo,
     async goToHref(item) {
       try {

@@ -203,7 +203,7 @@ function openMenu(anchor, items) {
   closeMenu();
   const m = document.createElement('div');
   m.className = 'menu';
-  m.innerHTML = items.map((it, i) => `<button type="button" data-i="${i}" class="${it.danger ? 'd' : ''}">${icon(it.icon)}<span>${esc(it.label)}</span></button>`).join('');
+  m.innerHTML = items.map((it, i) => `<button type="button" data-i="${i}" class="${it.danger ? 'd' : ''}${it.selected ? ' sel' : ''}" ${it.selected != null ? `role="menuitemradio" aria-checked="${!!it.selected}"` : ''}>${it.icon ? icon(it.icon) : '<span class="i-blank"></span>'}<span>${esc(it.label)}</span></button>`).join('');
   document.body.appendChild(m);
   const r = anchor.getBoundingClientRect();
   const w = m.offsetWidth;
@@ -226,6 +226,24 @@ function openMenu(anchor, items) {
   setTimeout(() => document.addEventListener('pointerdown', function off(ev) {
     if (!m.contains(ev.target)) { closeMenu(); document.removeEventListener('pointerdown', off, true); }
   }, true), 0);
+}
+
+/* ---------- dropdown ---------- */
+// Custom dropdown so it looks the same in every browser.
+function dropdownHTML(id, options, value, label) {
+  const cur = options.find(([v]) => v === value) || options[0];
+  return `<button class="dd" type="button" id="${id}" aria-haspopup="menu" aria-label="${esc(label)}: ${esc(cur[1])}"><span>${esc(cur[1])}</span><svg class="i" aria-hidden="true"><use href="#i-chev"/></svg></button>`;
+}
+function bindDropdown(id, options, value, onPick) {
+  const btn = $(`#${id}`);
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    btn.setAttribute('aria-expanded', 'true');
+    openMenu(btn, options.map(([v, l]) => ({ label: l, selected: v === value, icon: v === value ? 'check' : null, run: () => onPick(v) })));
+    const off = () => btn.setAttribute('aria-expanded', 'false');
+    setTimeout(() => menuEl?.addEventListener('click', off), 0);
+    document.addEventListener('pointerdown', off, { once: true, capture: true });
+  });
 }
 
 /* ---------- importing ---------- */
@@ -319,6 +337,7 @@ function heatmapHTML() {
   return `<div class="heat">${cells}</div>`;
 }
 
+const SORTS = [['recent', 'Recent'], ['title', 'Title'], ['author', 'Author'], ['progress', 'Progress']];
 function sortedBooks() {
   const q = S.libQuery.trim().toLowerCase();
   let list = S.books.filter((b) => !q || b.title.toLowerCase().includes(q) || (b.author || '').toLowerCase().includes(q));
@@ -370,9 +389,7 @@ function renderLibrary() {
     ? `<div class="section-title"><span>Books <span class="muted" style="font-weight:500">${S.books.length}</span></span>
         <div class="toolbar">
           <label class="search">${icon('search')}<input class="input" id="libSearch" type="search" placeholder="Search" value="${esc(S.libQuery)}" aria-label="Search books"></label>
-          <select class="select" id="libSort" aria-label="Sort books">
-            ${[['recent', 'Recent'], ['title', 'Title'], ['author', 'Author'], ['progress', 'Progress']].map(([k, l]) => `<option value="${k}" ${S.libSort === k ? 'selected' : ''}>${l}</option>`).join('')}
-          </select>
+          ${dropdownHTML('libSort', SORTS, S.libSort, 'Sort books')}
         </div></div>
        ${books.length ? `<div class="grid" id="bookGrid">${books.map(bookCardHTML).join('')}</div>` : '<p class="muted">No books match your search.</p>'}`
     : `<div class="empty" style="margin-top:24px">
@@ -398,7 +415,7 @@ function renderLibrary() {
     const list = sortedBooks();
     if (g) g.innerHTML = list.map(bookCardHTML).join('');
   });
-  $('#libSort')?.addEventListener('change', (e) => { S.libSort = e.target.value; renderLibrary(); });
+  bindDropdown('libSort', SORTS, S.libSort, (v) => { S.libSort = v; renderLibrary(); });
   $('#addSample')?.addEventListener('click', async (e) => {
     e.target.disabled = true;
     const b = await addSample();
@@ -491,7 +508,7 @@ function renderNotebook() {
       <button class="btn soft" type="button" id="nbExport" ${S.highlights.length ? '' : 'disabled'}>${icon('download')}Export</button></div>
     ${S.highlights.length ? `<div class="toolbar">
       <label class="search">${icon('search')}<input class="input" id="nbSearch" type="search" placeholder="Search highlights and notes" value="${esc(S.nb.q)}" aria-label="Search highlights"></label>
-      <select class="select" id="nbBook" aria-label="Book"><option value="all">All books</option>${booksWith.map((b) => `<option value="${b.id}" ${S.nb.book === b.id ? 'selected' : ''}>${esc(b.title)}</option>`).join('')}</select>
+      ${dropdownHTML('nbBook', [['all', 'All books'], ...booksWith.map((b) => [b.id, b.title])], S.nb.book, 'Book')}
       <div class="chips" role="group" aria-label="Colour">
         <button class="chip" type="button" data-color="all" aria-pressed="${S.nb.color === 'all'}">All</button>
         ${Object.entries(HL_COLORS).map(([k, c]) => `<button class="chip" type="button" data-color="${k}" aria-pressed="${S.nb.color === k}" aria-label="${c.label}"><i style="--c:${c.fill}"></i>${c.label}</button>`).join('')}
@@ -509,7 +526,7 @@ function renderNotebook() {
     </div>`;
 
   $('#nbSearch')?.addEventListener('input', (e) => { S.nb.q = e.target.value; refreshNbBody(); });
-  $('#nbBook')?.addEventListener('change', (e) => { S.nb.book = e.target.value; renderNotebook(); });
+  bindDropdown('nbBook', [['all', 'All books'], ...booksWith.map((b) => [b.id, b.title])], S.nb.book, (v) => { S.nb.book = v; renderNotebook(); });
   $$('[data-color]').forEach((c) => c.addEventListener('click', () => { S.nb.color = c.dataset.color; renderNotebook(); }));
   $('#nbExport')?.addEventListener('click', exportMarkdown);
 }
@@ -703,6 +720,7 @@ async function openReader(id, jumpHighlight) {
     tapCenter: () => { if (pop) { closePop(); return; } rEl.classList.toggle('immersive'); },
     key: onKey,
     saveLocations: (json) => { b.locations = json; db.put('books', b); },
+    zoomChange: (z) => { S.settings.pdfZoom = z; db.setKV('settings', S.settings); },
   };
   const host = $('#rHost');
   host.innerHTML = '';
@@ -819,12 +837,12 @@ rEl.addEventListener('click', (e) => {
   if (a === 'toc') tocDrawer();
   if (a === 'settings') readerSettings();
   if (a === 'zoomin' || a === 'zoomout') {
-    const steps = ['fit', '1.25', '1.5', '2', '2.5'];
-    let i = steps.indexOf(String(S.settings.pdfZoom));
-    if (i < 0) i = 0;
-    i = Math.max(0, Math.min(steps.length - 1, i + (a === 'zoomin' ? 1 : -1)));
-    updateSettings({ pdfZoom: steps[i] });
-    toast(steps[i] === 'fit' ? 'Fit to width' : `${Math.round(Number(steps[i]) * 100)}%`);
+    const cur = S.settings.pdfZoom === 'fit' ? 1 : Number(S.settings.pdfZoom) || 1;
+    let z = a === 'zoomin' ? cur * 1.25 : cur / 1.25;
+    z = Math.max(0.5, Math.min(4, z));
+    const val = Math.abs(z - 1) < 0.05 ? 'fit' : String(Math.round(z * 100) / 100);
+    updateSettings({ pdfZoom: val });
+    toast(val === 'fit' ? 'Fit to width' : `${Math.round(z * 100)}%`);
   }
 });
 $('#rRange').addEventListener('input', (e) => {
@@ -1070,7 +1088,7 @@ function renderCards() {
       ${S.cards.length ? `<button class="btn soft" type="button" id="cardsExport">${icon('download')}Export</button>` : ''}</div>
     ${S.cards.length ? `<div class="toolbar" style="margin-bottom:20px">
       <label class="search">${icon('search')}<input class="input" id="cardsSearch" type="search" placeholder="Search cards" value="${esc(S.cardsView.q)}" aria-label="Search cards"></label>
-      <select class="select" id="cardsBook" aria-label="Book"><option value="all">All books</option>${booksWith.map((b) => `<option value="${b.id}" ${S.cardsView.book === b.id ? 'selected' : ''}>${esc(b.title)}</option>`).join('')}</select>
+      ${dropdownHTML('cardsBook', [['all', 'All books'], ...booksWith.map((b) => [b.id, b.title])], S.cardsView.book, 'Book')}
     </div>` : ''}
     ${!S.cards.length
       ? `<div class="empty" style="margin-top:10px"><span class="big">${icon('cards')}</span><h2>Save the lines that matter</h2><p>While reading, select a sentence or a whole section and tap <b>Card</b>. Words you look up can be saved here too.</p><a class="btn soft" href="#/library">Go to library</a></div>`
@@ -1082,7 +1100,7 @@ function renderCards() {
     if (g) g.innerHTML = l.map(cardHTML).join('');
     else renderCards();
   });
-  $('#cardsBook')?.addEventListener('change', (e) => { S.cardsView.book = e.target.value; renderCards(); });
+  bindDropdown('cardsBook', [['all', 'All books'], ...booksWith.map((b) => [b.id, b.title])], S.cardsView.book, (v) => { S.cardsView.book = v; renderCards(); });
   $('#cardsExport')?.addEventListener('click', exportCards);
 }
 $('#view').addEventListener('click', async (e) => {

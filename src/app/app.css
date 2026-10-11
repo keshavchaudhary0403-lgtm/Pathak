@@ -391,3 +391,17 @@ a.stat{transition:transform .2s}
 .nb-book:hover span{color:var(--a3)}
 .qc .src-l{min-width:0;flex:1 1 140px;font-size:12.5px;color:var(--muted)}
 .qc .src-l:hover{color:var(--a2);text-decoration:underline}
+
+/* dropdown */
+.dd{display:inline-flex;align-items:center;justify-content:space-between;gap:10px;height:42px;max-width:260px;min-width:0;padding:0 14px 0 18px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-weight:600;font-size:14px;line-height:1;box-shadow:var(--shadow-s);transition:border-color .15s,transform .15s}
+.dd span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dd svg.i{width:16px;height:16px;color:var(--muted);transition:transform .2s}
+.dd:hover{border-color:color-mix(in srgb,var(--a3) 45%,transparent)}
+.dd[aria-expanded="true"]{border-color:var(--a3);box-shadow:0 0 0 3px color-mix(in srgb,var(--a3) 22%,transparent)}
+.dd[aria-expanded="true"] svg.i{transform:rotate(180deg)}
+.menu{max-height:min(60vh,420px);overflow:auto;max-width:min(320px,calc(100vw - 16px))}
+.menu button span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.menu button.sel{color:var(--a3);font-weight:650}
+.menu .i-blank{width:20px;height:20px;flex:none}
+#reader[data-kind="pdf"] .r-host{max-width:none}
+.pdf-col{will-change:transform}

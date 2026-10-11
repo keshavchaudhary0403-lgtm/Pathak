@@ -1,5 +1,5 @@
 // Offline support: pages network-first, built assets and fonts cache-first.
-const CACHE = 'pathak-v3';
+const CACHE = 'pathak-v4';
 const SHELL = ['/', '/app', '/favicon.svg', '/site.webmanifest', '/icon-192.png', '/samples/welcome-to-pathak.epub'];
 
 self.addEventListener('install', (e) => {

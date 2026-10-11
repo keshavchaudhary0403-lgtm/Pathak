@@ -63,9 +63,32 @@ export async function openEpub({ book, blob, host, settings, highlights, on }) {
     `;
   };
 
+  // Mouse wheel and trackpad turn pages in paged mode. One gesture turns one page,
+  // waiting for the trackpad's momentum to settle before the next turn.
+  let wAcc = 0;
+  let lastWheel = 0;
+  let wLocked = false;
+  function onWheel(e) {
+    if (scrolled || e.ctrlKey || e.metaKey) return;
+    const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    const now = Date.now();
+    const gap = now - lastWheel;
+    lastWheel = now;
+    if (gap > 300) wAcc = 0;
+    if (wLocked) { if (gap < 200) return; wLocked = false; wAcc = 0; }
+    wAcc += d;
+    if (Math.abs(wAcc) > 40) {
+      wAcc > 0 ? rendition.next() : rendition.prev();
+      wAcc = 0;
+      wLocked = true;
+    }
+  }
+  host.addEventListener('wheel', onWheel, { passive: true });
+
   rendition.hooks.content.register((contents) => {
     contents.addStylesheet(FONT_CSS_URL);
     contents.addStylesheetCss(cssFor(current), 'pathak-style');
+    contents.document.addEventListener('wheel', onWheel, { passive: true });
   });
 
   function applyHostPadding(s) {
