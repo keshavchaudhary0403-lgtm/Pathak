@@ -530,32 +530,66 @@ function refreshCurrent() {
 }
 
 /* ---------- dictionary ---------- */
-async function defineSheet(word, ctx) {
-  const sh = openSheet(`<div id="dictBody"><div class="dict-word">${esc(word)}</div><div style="padding:24px 0;text-align:center" class="muted"><div class="spinner"></div>Looking up…</div></div>`);
-  const res = await lookup(word);
+function speak(word, lang, audio) {
+  if (audio) { new Audio(audio).play().catch(() => speak(word, lang)); return; }
+  if (!('speechSynthesis' in window)) { toast("This browser can't read words aloud."); return; }
+  const u = new SpeechSynthesisUtterance(word);
+  u.lang = lang === 'hi' ? 'hi-IN' : 'en-IN';
+  u.rate = 0.9;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+}
+async function defineSheet(rawWord, ctx) {
+  const shown = rawWord.replace(/^[^\p{L}\p{M}]+|[^\p{L}\p{M}]+$/gu, '');
+  const display = shown.length > 1 && shown === shown.toUpperCase() && !/[ऀ-ॿ]/.test(shown) ? shown.toLowerCase() : shown;
+  const head = (w, sub = '') => `
+    <div class="dict-head">
+      <div class="dict-title"><div class="dict-word">${esc(w)}</div>${sub ? `<div class="dict-sub">${sub}</div>` : ''}</div>
+      <button class="ib dict-x" type="button" data-x="close" aria-label="Close">${icon('x')}</button>
+    </div>`;
+  const sh = openSheet(`<div class="dict" id="dictBody">${head(display || rawWord)}
+    <div class="dict-load" aria-label="Looking up"><i></i><i></i><i style="width:60%"></i></div></div>`, { dialog: true });
+  sh.classList.add('dict-sheet');
+  sh.addEventListener('click', (e) => { if (e.target.closest('[data-x="close"]')) closeOverlay(); });
+  const res = await lookup(rawWord);
   if (!document.body.contains(sh)) return;
   const body = $('#dictBody', sh);
-  if (!res) { body.innerHTML = `<div class="dict-word">${esc(word)}</div><p class="muted" style="margin-top:8px">Select a single word to look it up.</p>`; return; }
-  if (res.offline) { body.innerHTML = `<div class="dict-word">${esc(res.word)}</div><p class="muted" style="margin-top:8px">Connect to the internet to look up words.</p>`; return; }
+  const msg = (t) => `${head(display || rawWord)}<p class="dict-msg">${t}</p>
+    <div class="foot"><a class="btn soft sm" href="https://www.google.com/search?q=${encodeURIComponent(`${display} meaning in Hindi`)}" target="_blank" rel="noopener">${icon('search')}Search the web</a></div>`;
+  if (!res) { body.innerHTML = msg('Select a single word to look it up.'); return; }
+  if (res.offline) { body.innerHTML = msg("You're offline. Connect to the internet to look up words."); return; }
+  if (res.empty) { body.innerHTML = msg("Couldn't find this word. Try searching the web."); return; }
   const hi = res.lang === 'hi';
+  const sub = [res.phonetic || res.translit, res.senses[0]?.pos || res.groups[0]?.pos].filter(Boolean).map(esc).join(' · ');
   body.innerHTML = `
-    <div><span class="dict-word">${esc(res.word)}</span>${res.phonetic ? `<span class="dict-ph">${esc(res.phonetic)}</span>` : ''}</div>
-    ${res.translation ? `<div class="dict-tr"><b>${esc(res.translation)}</b><span>${hi ? 'English' : 'Hindi'}</span></div>` : ''}
-    ${res.senses.map((s) => `<div class="dict-sense"><i>${esc(s.pos)}</i><p>${esc(s.def)}</p>${s.example ? `<em>“${esc(s.example)}”</em>` : ''}</div>`).join('')}
-    ${res.empty ? '<p class="muted" style="margin-top:10px">No meaning found for this word.</p>' : ''}
-    <div class="foot" style="justify-content:space-between">
+    <div class="dict-head">
+      <div class="dict-title"><div class="dict-word">${esc(res.word)}</div>${sub ? `<div class="dict-sub">${sub}</div>` : ''}</div>
+      <button class="ib dict-say" type="button" data-x="say" aria-label="Pronounce">${icon('speaker')}</button>
+      <button class="ib dict-x" type="button" data-x="close" aria-label="Close">${icon('x')}</button>
+    </div>
+    ${res.translations.length ? `<div class="dict-tr">
+      <span class="lbl">${hi ? 'English' : 'हिन्दी'}</span>
+      <div class="chips-tr">${res.translations.map((t, i) => `<span class="${i === 0 ? 'main' : ''} ${hi ? '' : 'deva'}">${esc(t)}</span>`).join('')}</div>
+    </div>` : ''}
+    ${res.senses.length ? `<div class="dict-senses">${res.senses.map((s) => `
+      <div class="dict-sense"><span class="pos">${esc(s.pos)}</span>
+        <ol>${s.defs.map((d) => `<li>${esc(d.def)}${d.example ? `<em>“${esc(d.example)}”</em>` : ''}</li>`).join('')}</ol>
+      </div>`).join('')}</div>` : ''}
+    <div class="foot">
       <a class="btn ghost sm" href="https://www.google.com/search?q=${encodeURIComponent(`${res.word} meaning`)}" target="_blank" rel="noopener">${icon('search')}Search the web</a>
-      ${!res.empty ? '<button class="btn primary sm" type="button" id="wordCard">' + icon('cards') + 'Save to Cards</button>' : ''}
+      <button class="btn primary sm" type="button" id="wordCard">${icon('cards')}Save to Cards</button>
     </div>`;
+  $('[data-x="say"]', sh)?.addEventListener('click', () => speak(res.word, res.lang, res.audio));
   $('#wordCard', sh)?.addEventListener('click', async (e) => {
-    const meaning = res.senses.map((x) => x.def).slice(0, 2).join(' ');
+    const meaning = res.senses.flatMap((x) => x.defs.map((d) => d.def)).slice(0, 2).join(' ');
     await putCard({
       id: uid(), kind: 'word', bookId: ctx?.bookId || null, text: res.word,
-      translation: res.translation || '', meaning, pos: res.senses[0]?.pos || '',
+      translation: res.translations.slice(0, 3).join(', '), meaning, pos: res.senses[0]?.pos || res.groups[0]?.pos || '',
       context: ctx?.text || '', chapter: R.chapter || '', createdAt: Date.now(), note: '',
     });
-    e.target.closest('button').disabled = true;
-    e.target.closest('button').innerHTML = icon('check') + 'Saved';
+    const btn = e.target.closest('button');
+    btn.disabled = true;
+    btn.innerHTML = `${icon('check')}Saved`;
   });
 }
 
