@@ -899,6 +899,7 @@ function popHTML(activeColor, existing) {
     <span class="sep"></span>
     <button class="pb" type="button" data-p="note">${icon('note')}Note</button>
     ${existing ? '' : `<button class="pb" type="button" data-p="define">${icon('define')}Define</button>`}
+    <button class="pb" type="button" data-p="card">${icon('cards')}Card</button>
     <button class="pb" type="button" data-p="copy">${icon('copy')}Copy</button>
     ${existing ? `<button class="pb" type="button" data-p="del">${icon('trash')}Delete</button>` : ''}`;
 }
@@ -934,6 +935,12 @@ function onSelect(sel) {
     const p = b.dataset.p;
     if (p === 'copy') { copyText(sel.text); sel.clear(); closePop(); }
     if (p === 'define') { const w = sel.text.split(/\s+/)[0]; sel.clear(); closePop(); defineSheet(w, { bookId: R.book.id, text: sel.text }); }
+    if (p === 'card') {
+      await saveHighlight(makeHighlight(sel, 'yellow'));
+      sel.clear(); closePop();
+      savedToast();
+      return;
+    }
     if (p === 'note') {
       const h = makeHighlight(sel, 'yellow');
       await saveHighlight(h);
@@ -961,6 +968,7 @@ function onHighlightClick(id, rect) {
     closePop();
     if (p === 'copy') copyText(h.text);
     if (p === 'note') noteDialog(h);
+    if (p === 'card') toast('Already in Cards', { label: 'View', run: () => { closeReader(false).then(() => go('#/cards')); } });
     if (p === 'del') deleteHighlight(h);
   });
 }
