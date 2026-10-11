@@ -1,17 +1,28 @@
 # Pathak (पाठक)
 
-A free browser e-reader for EPUB and PDF, built for India.
+A free e-reader that runs in the browser. Live at https://pathak-woad.vercel.app
 
-- Highlights and notes, exported as Markdown
-- Tap-to-define dictionary, English with Hindi meanings
-- Reading progress, time left in chapter, paper / sepia / night themes
-- Flashcards made from highlights, with spaced-repetition review (exam prep)
-- Hindi-first Devanagari typography
+## Features
+- Library for EPUB and PDF: import by button or drag and drop, covers, progress, continue reading
+- EPUB reader: pages or scroll, swipe and arrow keys, contents, 4 page themes, 5 typefaces, size, spacing, margins, time left in chapter
+- PDF reader: continuous scroll, zoom, outline, selectable text
+- Highlights in 4 colours, notes, copy
+- Dictionary: English meaning with Hindi word, and Hindi to English
+- Notebook: search, filter, Markdown export
+- Flashcards from highlights or words, spaced-repetition review
+- Reading streak, minutes read, activity heatmap
+- Backup and restore, installable app with offline support
 
-Pathak opens DRM-free files only (your own EPUB/PDF, NCERT, Project Gutenberg, Standard Ebooks, Open Library). Kindle-store books are DRM-locked and are not supported.
+All data stays in the browser (IndexedDB). Only DRM-free files can be opened.
 
-## Status
-v0.1: landing page (`index.html`). The reader app is next.
+## Develop
+```
+npm install
+npm run dev
+```
+Build with `npm run build`. Vercel builds with Vite and serves `dist/` (see `vercel.json`).
 
-## Deploy
-Static site, no build step. Import this repo in Vercel with the default settings.
+## Structure
+- `index.html`: landing page
+- `app.html`, `src/app/`: the reader app
+- `public/`: icons, manifest, service worker, sample book

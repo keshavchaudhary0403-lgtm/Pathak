@@ -2,7 +2,7 @@
   "name": "Pathak Reader",
   "short_name": "Pathak",
   "description": "Free e-reader for EPUB and PDF with Hindi-English dictionary and flashcards from your highlights.",
-  "start_url": "/",
+  "start_url": "/app",
   "scope": "/",
   "display": "standalone",
   "background_color": "#0C0A12",

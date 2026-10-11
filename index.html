@@ -88,7 +88,7 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 @keyframes drift{to{transform:translate(6vw,8vw) scale(1.15)}}
 
 /* buttons */
-.btn{display:inline-flex;align-items:center;gap:9px;font:650 15px/1 var(--f-body);padding:15px 22px;border-radius:999px;text-decoration:none;cursor:pointer;border:0;transition:transform .2s,box-shadow .2s}
+.btn{display:inline-flex;align-items:center;gap:9px;white-space:nowrap;font:650 15px/1 var(--f-body);padding:15px 22px;border-radius:999px;text-decoration:none;cursor:pointer;border:0;transition:transform .2s,box-shadow .2s}
 .btn.primary{background:var(--ink);color:var(--bg);box-shadow:var(--shadow-s)}
 .btn.primary .dot{width:8px;height:8px;border-radius:50%;background:var(--grad)}
 .btn.sec{color:var(--ink)}
@@ -357,11 +357,11 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:16px;fl
     <ul>
       <li><a href="#features">Features</a></li>
       <li><a href="#hindi">Hindi</a></li>
-      <li><a href="#exam">Exam prep</a></li>
+      <li><a href="#exam">Remember</a></li>
       <li><a href="#library">Free books</a></li>
     </ul>
     <button class="themebtn" type="button" id="themeBtn" aria-label="Switch to light theme"><svg class="i moon"><use href="#i-moon"/></svg><svg class="i sun"><use href="#i-sun"/></svg></button>
-    <a class="btn primary" href="#start"><span class="dot"></span>Open reader</a>
+    <a class="btn primary" href="/app"><span class="dot"></span>Open app</a>
   </nav>
 </div>
 
@@ -370,9 +370,9 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:16px;fl
     <div>
       <span class="pill glass"><b>NEW</b>The reader made for India · free</span>
       <h1>Read anything.<br><span class="grad-text">Remember everything.</span></h1>
-      <p class="lede">Pathak turns your phone or laptop into a beautiful e-reader. Open EPUB and PDF, highlight as you go, tap any word for its Hindi meaning, and let your highlights become flashcards.</p>
+      <p class="lede">An e-reader for your phone and laptop. Highlight as you read, look up any word in Hindi or English, and turn what you mark into flashcards.</p>
       <div class="ctas">
-        <a class="btn primary" href="#start"><span class="dot"></span>Start reading free</a>
+        <a class="btn primary" href="/app"><span class="dot"></span>Start reading free</a>
         <a class="btn sec glass" href="#exam">See flashcards<svg class="i"><use href="#i-arrow"/></svg></a>
       </div>
       <div class="trust">
@@ -385,22 +385,22 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:16px;fl
     <div class="stage">
       <div class="float glass f1"><span class="ic"><svg class="i"><use href="#i-flame"/></svg></span><div><b>12-day streak</b><small>Keep it going</small></div></div>
       <div class="float glass f2" id="dueChip"><span class="ic"><svg class="i"><use href="#i-cards"/></svg></span><div><b id="dueTxt">64 cards</b><small id="dueSub">due today</small></div></div>
-      <div class="float glass f3"><span class="ic"><svg class="i"><use href="#i-lang"/></svg></span><div><b class="deva">स्वतंत्रता</b><small>liberty · noun</small></div></div>
+      <div class="float glass f3"><span class="ic"><svg class="i"><use href="#i-lang"/></svg></span><div><b class="deva">भावना</b><small>emotion · noun</small></div></div>
 
       <div class="phone" aria-label="Pathak app preview">
         <div class="screen" id="screen" data-rt="paper">
           <div class="sbar"><span>9:41</span><span class="island"></span><span>5G</span></div>
           <div class="appbar">
             <button class="ib" type="button" aria-label="Back"><svg class="i"><use href="#i-back"/></svg></button>
-            <div class="t"><b>Indian Polity</b><span>Chapter 7 of 22</span></div>
+            <div class="t"><b>The Adventures of Sherlock Holmes</b><span>Chapter 1 of 12</span></div>
             <button class="ib" type="button" aria-label="Text settings">Aa</button>
           </div>
           <div class="content">
-            <div class="ch">Chapter 7</div>
-            <h4>Fundamental Rights</h4>
-            <p>Part III of the Constitution lists the rights every person can enforce in court. One article has grown wider than any other through judicial reading.</p>
-            <p><span class="hl">Article 21: No person shall be deprived of his life or personal <button class="word" type="button" id="w" aria-haspopup="dialog" aria-controls="sheet">liberty</button> except according to procedure established by law.</span></p>
-            <p>The Supreme Court has read into it the right to privacy, to a clean environment and to a speedy trial.</p>
+            <div class="ch">Chapter 1</div>
+            <h4>A Scandal in Bohemia</h4>
+            <p>To Sherlock Holmes she is always <i>the</i> woman. I have seldom heard him mention her under any other name. In his eyes she eclipses and predominates the whole of her sex.</p>
+            <p><span class="hl">It was not that he felt any <button class="word" type="button" id="w" aria-haspopup="dialog" aria-controls="sheet">emotion</button> akin to love for Irene Adler.</span></p>
+            <p>All emotions, and that one particularly, were abhorrent to his cold, precise but admirably balanced mind.</p>
           </div>
           <div class="botbar">
             <div class="prog"><i></i></div>
@@ -414,12 +414,12 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:16px;fl
               <button class="cardbtn" type="button" id="mk"><svg class="i"><use href="#i-plus"/></svg>Make card</button>
             </div>
           </div>
-          <div class="toast" id="toast" role="status"><svg class="i"><use href="#i-check"/></svg><span id="toastTxt">Added to Polity deck</span></div>
+          <div class="toast" id="toast" role="status"><svg class="i"><use href="#i-check"/></svg><span id="toastTxt">Card added</span></div>
           <div class="sheet" id="sheet" role="dialog" aria-label="Dictionary">
             <div class="grab"></div>
-            <div><span class="w">liberty</span><span class="pos">noun · /ˈlɪb.ə.ti/</span></div>
-            <p>Freedom from arbitrary control by the state or any authority.</p>
-            <div class="hin"><span class="deva">स्वतंत्रता</span><span class="deva" style="font-size:15px;opacity:.7">आज़ादी</span><span>Hindi</span></div>
+            <div><span class="w">emotion</span><span class="pos">noun · /ɪˈməʊ.ʃən/</span></div>
+            <p>A strong feeling such as love, anger, joy or fear.</p>
+            <div class="hin"><span class="deva">भावना</span><span class="deva" style="font-size:15px;opacity:.7">मनोभाव</span><span>Hindi</span></div>
             <div class="acts"><button class="s" type="button" id="closeSheet">Close</button><button class="p" type="button" id="addWord">Add to cards</button></div>
           </div>
         </div>
@@ -431,25 +431,25 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:16px;fl
     <div class="shead">
       <span class="eyebrow"><span class="tick"></span>Everything a Kindle does</span>
       <h2>All the reading tools.<br>None of the hardware.</h2>
-      <p class="lead">The features people actually use every day, in the browser you already have. Add it to your home screen and it opens like any other app.</p>
+      <p class="lead">Works in any browser. Add it to your home screen and it opens like an app.</p>
     </div>
     <div class="bento">
       <div class="tile glass t-a">
         <span class="tic"><svg class="i"><use href="#i-pen"/></svg></span>
         <h3>Highlights and notes</h3>
-        <p>Four colours, a note on any line, and one searchable list of everything you marked. Export it all as Markdown.</p>
+        <p>Four colours, notes, and one searchable list of everything you marked.</p>
         <div class="vis hls">
           <div class="colors"><i style="--c:#FFD43B"></i><i style="--c:#FF6B9A"></i><i style="--c:#5BC0EB"></i><i style="--c:#7EE081"></i></div>
-          <div class="hlc" style="--c:#FFD43B">The Preamble was amended once, by the 42nd Amendment in 1976.<small>Indian Polity · p. 34 · Note: likely prelims</small></div>
-          <div class="hlc" style="--c:#FF6B9A">Fundamental Duties were added in Part IV-A.<small>Indian Polity · p. 112</small></div>
-          <div class="hlc" style="--c:#5BC0EB">The Battle of Plassey in 1757 began British political control in Bengal.<small>Modern India · p. 18</small></div>
+          <div class="hlc" style="--c:#FFD43B">To Sherlock Holmes she is always the woman.<small>The Adventures of Sherlock Holmes · Note: Irene Adler</small></div>
+          <div class="hlc deva" style="--c:#FF6B9A;font-family:var(--f-deva-read);font-size:16px">पोथी पढ़ि पढ़ि जग मुआ, पंडित भया न कोय।<small style="font-family:var(--f-body)">Kabir ke Dohe</small></div>
+          <div class="hlc" style="--c:#5BC0EB">The Ganga rises at the Gangotri Glacier in Uttarakhand.<small>Geography notes · p. 42</small></div>
         </div>
       </div>
       <div class="tile glass t-b">
         <span class="tic"><svg class="i"><use href="#i-lang"/></svg></span>
         <h3>Tap any word, get the meaning</h3>
-        <p>English definition with the Hindi word underneath. Works the other way for Hindi books.</p>
-        <div class="vis dict"><div><span class="w">sovereign</span><p style="font-size:13px;margin-top:2px">adj · supreme, independent</p></div><span class="deva">संप्रभु</span></div>
+        <p>English and Hindi, both ways.</p>
+        <div class="vis dict"><div><span class="w">curious</span><p style="font-size:13px;margin-top:2px">adj · eager to know or learn</p></div><span class="deva">जिज्ञासु</span></div>
       </div>
       <div class="tile glass">
         <span class="tic"><svg class="i"><use href="#i-clock"/></svg></span>
@@ -467,13 +467,13 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:16px;fl
       <div class="tile glass t-e">
         <span class="tic"><svg class="i"><use href="#i-sync"/></svg></span>
         <h3>Start on the laptop, finish on the phone</h3>
-        <p>Your place, highlights and cards follow your account across every device.</p>
+        <p>Pick up exactly where you stopped, on any screen.</p>
         <div class="vis devs"><div class="dv lap"><i></i></div><div class="dv tab"><i></i></div><div class="dv ph"><i></i></div><span class="syncl"><i></i>Synced just now</span></div>
       </div>
       <div class="tile glass t-f">
         <span class="tic"><svg class="i"><use href="#i-file"/></svg></span>
         <h3>EPUB and PDF, both done right</h3>
-        <p>Reflowing text for EPUB novels. Sharp zoom and pan for PDF textbooks and coaching notes.</p>
+        <p>Reflowing text for EPUB. Sharp zoom for PDF.</p>
         <div class="vis files"><div class="file" style="--c:var(--a1)">EPUB</div><div class="file" style="--c:var(--a3)">PDF</div><div class="drop">Drop a file here to start</div></div>
       </div>
     </div>
@@ -485,7 +485,7 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:16px;fl
         <div class="shead" style="margin-bottom:0">
           <span class="eyebrow"><span class="tick"></span>Hindi first</span>
           <h2>Devanagari that looks like a real book</h2>
-          <p class="lead">Most reading apps treat Hindi as an afterthought: broken conjuncts, cramped matras, a dictionary that only speaks English. Pathak sets Indian scripts properly from day one.</p>
+          <p class="lead">Proper fonts and spacing for Indian scripts, and a dictionary that speaks both languages.</p>
         </div>
         <div class="marquee" aria-label="Languages">
           <div class="track">
@@ -511,24 +511,24 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:16px;fl
           <button type="button" data-l="hi" aria-pressed="true">हिन्दी</button>
           <button type="button" data-l="en" aria-pressed="false">English</button>
         </div>
-        <p class="bp-text hi" id="bpText"><mark>अनुच्छेद 21</mark> — किसी व्यक्ति को उसके प्राण या दैहिक स्वतंत्रता से विधि द्वारा स्थापित प्रक्रिया के अनुसार ही वंचित किया जाएगा, अन्यथा नहीं।</p>
-        <div class="bp-foot"><span id="bpSrc">भारत का संविधान · भाग 3</span><span>Same page, both scripts</span></div>
+        <p class="bp-text hi" id="bpText">पोथी पढ़ि पढ़ि जग मुआ, पंडित भया न कोय।<br><mark>ढाई आखर प्रेम का</mark>, पढ़े सो पंडित होय॥</p>
+        <div class="bp-foot"><span id="bpSrc">कबीर के दोहे</span><span>Tap to switch</span></div>
       </div>
     </div>
   </section>
 
   <section id="exam">
     <div class="shead">
-      <span class="eyebrow"><span class="tick"></span>Built for exam prep</span>
-      <h2>Your highlights become a <span class="grad-text">revision deck</span></h2>
-      <p class="lead">Made for UPSC, SSC, banking and state exam aspirants who read the same NCERTs and notes again and again. Mark it once, and Pathak decides when you see it next.</p>
+      <span class="eyebrow"><span class="tick"></span>Remember more</span>
+      <h2>Your highlights become <span class="grad-text">flashcards</span></h2>
+      <p class="lead">For anyone who reads to learn. Mark a line once and Pathak brings it back just before you would forget it.</p>
     </div>
     <div class="exam">
       <div>
         <div class="steps">
-          <div class="step glass"><span class="n">1</span><div><h3>Highlight while you read</h3><p>Mark the fact the way you would with a pen. No switching apps.</p></div></div>
-          <div class="step glass"><span class="n">2</span><div><h3>Pathak writes the question</h3><p>Each highlight becomes a card that links back to its page. Edit it if you like.</p></div></div>
-          <div class="step glass"><span class="n">3</span><div><h3>Revise only what is due</h3><p>Cards you know come back later. Cards you miss come back sooner. Ten minutes a day keeps a subject fresh.</p></div></div>
+          <div class="step glass"><span class="n">1</span><div><h3>Highlight while you read</h3><p>Mark a line the way you would with a pen.</p></div></div>
+          <div class="step glass"><span class="n">2</span><div><h3>Pathak writes the question</h3><p>Edit it if you like. It links back to the page.</p></div></div>
+          <div class="step glass"><span class="n">3</span><div><h3>Revise only what is due</h3><p>Known cards wait longer. Missed ones come back sooner.</p></div></div>
         </div>
         <div class="step glass" style="display:block;margin-top:12px">
           <div class="streak"><span>Reading streak</span><span><b>12 days</b> · last 21 weeks</span></div>
@@ -541,7 +541,7 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:16px;fl
           <div class="due"><span>Due <b id="dLeft">4</b></span><span>Done <b id="dDone">0</b></span></div>
         </div>
         <div class="qcard" id="qcard">
-          <span class="qtag" id="qTag">Polity</span>
+          <span class="qtag" id="qTag">Fiction</span>
           <p class="qq" id="qQ"></p>
           <p class="qa" id="qA" hidden></p>
           <span class="qsrc" id="qSrc"></span>
@@ -560,35 +560,35 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:16px;fl
     <div class="shead">
       <span class="eyebrow"><span class="tick"></span>Where books come from</span>
       <h2>Plenty to read. All of it legal.</h2>
-      <p class="lead">Pathak opens DRM-free files. Bring your own, or pick from free public libraries.</p>
+      <p class="lead">Bring your own DRM-free files, or start with these free libraries.</p>
     </div>
     <div class="srcs">
-      <div class="src glass"><span class="mono-l" style="--c:linear-gradient(135deg,var(--a2),var(--a3))"><svg class="i"><use href="#i-file"/></svg></span><div><h3>Your own files</h3><p>DRM-free ebooks, class notes, coaching material.</p><span class="tg">UPLOAD</span></div></div>
-      <div class="src glass"><span class="mono-l" style="--c:linear-gradient(135deg,#FF8A1F,#F25C05)">N</span><div><h3>NCERT textbooks</h3><p>The full school series from the government, in Hindi and English.</p><span class="tg">FREE</span></div></div>
-      <div class="src glass"><span class="mono-l" style="--c:linear-gradient(135deg,#1F9D8A,#0E7C86)">G</span><div><h3>Project Gutenberg</h3><p>Over 70,000 classics whose copyright has expired.</p><span class="tg">FREE</span></div></div>
-      <div class="src glass"><span class="mono-l" style="--c:linear-gradient(135deg,#3B82F6,#6366F1)">S</span><div><h3>Standard Ebooks</h3><p>Public-domain books, carefully proofread and typeset.</p><span class="tg">FREE</span></div></div>
-      <div class="src glass"><span class="mono-l" style="--c:linear-gradient(135deg,#8B5CF6,#C026D3)">O</span><div><h3>Open Library</h3><p>Borrow scanned books from the Internet Archive.</p><span class="tg">BORROW</span></div></div>
-      <div class="src glass"><span class="mono-l deva" style="--c:linear-gradient(135deg,#E11D48,#F97316);font-family:var(--f-deva)">प्रे</span><div><h3>Hindi classics</h3><p>Public-domain writers, from Bharatendu to Premchand.</p><span class="tg">FREE</span></div></div>
+      <div class="src glass"><span class="mono-l" style="--c:linear-gradient(135deg,var(--a2),var(--a3))"><svg class="i"><use href="#i-file"/></svg></span><div><h3>Your own files</h3><p>Any DRM-free EPUB or PDF.</p><span class="tg">UPLOAD</span></div></div>
+      <div class="src glass"><span class="mono-l" style="--c:linear-gradient(135deg,#FF8A1F,#F25C05)">N</span><div><h3>NCERT textbooks</h3><p>School textbooks in Hindi and English.</p><span class="tg">FREE</span></div></div>
+      <div class="src glass"><span class="mono-l" style="--c:linear-gradient(135deg,#1F9D8A,#0E7C86)">G</span><div><h3>Project Gutenberg</h3><p>Over 70,000 free classics.</p><span class="tg">FREE</span></div></div>
+      <div class="src glass"><span class="mono-l" style="--c:linear-gradient(135deg,#3B82F6,#6366F1)">S</span><div><h3>Standard Ebooks</h3><p>Beautifully edited classics.</p><span class="tg">FREE</span></div></div>
+      <div class="src glass"><span class="mono-l" style="--c:linear-gradient(135deg,#8B5CF6,#C026D3)">O</span><div><h3>Open Library</h3><p>Borrow from the Internet Archive.</p><span class="tg">BORROW</span></div></div>
+      <div class="src glass"><span class="mono-l deva" style="--c:linear-gradient(135deg,#E11D48,#F97316);font-family:var(--f-deva)">प्रे</span><div><h3>Hindi classics</h3><p>From Bharatendu to Premchand.</p><span class="tg">FREE</span></div></div>
     </div>
-    <div class="info glass"><svg class="i"><use href="#i-info"/></svg><p><b>Books bought on the Kindle store stay in the Kindle app.</b> Amazon locks them with DRM, so no other reader can open them legally. Pathak works with everything else.</p></div>
+    <div class="info glass"><svg class="i"><use href="#i-info"/></svg><p><b>Kindle-store books stay in the Kindle app.</b> They are locked with DRM, so other readers can’t open them.</p></div>
   </section>
 
   <section id="start" style="padding-bottom:0">
     <div class="cta">
       <div>
         <h2>Open your first book in under a minute</h2>
-        <p>No device. No subscription. Pick a file and start reading, and your highlights will be waiting next time.</p>
+        <p>No device, no subscription.</p>
       </div>
       <div class="ctas" style="margin-top:0">
-        <a class="btn primary" href="#top">Start reading free<svg class="i"><use href="#i-arrow"/></svg></a>
-        <a class="btn sec" href="#library">Browse free books</a>
+        <a class="btn primary" href="/app">Start reading free<svg class="i"><use href="#i-arrow"/></svg></a>
+        <a class="btn sec" href="#library">Where to find books</a>
       </div>
     </div>
   </section>
 
   <footer>
     <a class="brand" href="#top"><span class="logo">प</span>Pathak</a>
-    <span>Made in India · EPUB &amp; PDF reader · Preview</span>
+    <span>Made in India · EPUB &amp; PDF reader</span>
   </footer>
 </main>
 
@@ -627,12 +627,12 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:16px;fl
     due++;$('dueTxt').textContent=due+' cards';$('dueSub').textContent='1 just added';
     var c=$('dueChip');c.classList.remove('bump');void c.offsetWidth;c.classList.add('bump');
   }
-  $('mk').addEventListener('click',function(){toast('Added to Polity deck')});
-  $('addWord').addEventListener('click',function(){setSheet(false);toast('“liberty” added to Words')});
+  $('mk').addEventListener('click',function(){toast('Card added')});
+  $('addWord').addEventListener('click',function(){setSheet(false);toast('“emotion” added to cards')});
 
   var texts={
-    hi:{t:'<mark>अनुच्छेद 21</mark> — किसी व्यक्ति को उसके प्राण या दैहिक स्वतंत्रता से विधि द्वारा स्थापित प्रक्रिया के अनुसार ही वंचित किया जाएगा, अन्यथा नहीं।',s:'भारत का संविधान · भाग 3'},
-    en:{t:'<mark>Article 21</mark> — No person shall be deprived of his life or personal liberty except according to procedure established by law.',s:'Constitution of India · Part III'}
+    hi:{t:'पोथी पढ़ि पढ़ि जग मुआ, पंडित भया न कोय।<br><mark>ढाई आखर प्रेम का</mark>, पढ़े सो पंडित होय॥',s:'कबीर के दोहे'},
+    en:{t:'The world died reading thick books, and no one became wise. Whoever reads <mark>the two and a half letters of love</mark> becomes truly learned.',s:'Kabir’s couplets · translation'}
   };
   document.querySelectorAll('.tog button').forEach(function(b){
     b.addEventListener('click',function(){
@@ -646,10 +646,10 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:16px;fl
   for(var i=0;i<147;i++){var c=document.createElement('i');var r=rnd();var l=i>134?3:(r>.82?3:r>.6?2:r>.38?1:0);c.setAttribute('data-l',l);heat.appendChild(c)}
 
   var cards=[
-    {tag:'Polity',q:'Which amendment added “socialist”, “secular” and “integrity” to the Preamble?',a:'The 42nd Amendment, 1976.',s:'From your highlight · Indian Polity, p. 34'},
-    {tag:'Polity',q:'Which article protects the right to life and personal liberty?',a:'Article 21.',s:'From your highlight · Indian Polity, p. 98'},
-    {tag:'History',q:'In which year was the Battle of Plassey fought?',a:'1757.',s:'From your highlight · Modern India, p. 18'},
-    {tag:'Polity',q:'Who chaired the Drafting Committee of the Constituent Assembly?',a:'Dr B. R. Ambedkar.',s:'From your highlight · Indian Polity, p. 12'}
+    {tag:'Fiction',q:'Who is “the woman” to Sherlock Holmes?',a:'Irene Adler.',s:'From your highlight · The Adventures of Sherlock Holmes'},
+    {tag:'Words',q:'What does “ephemeral” mean?',a:'Lasting a very short time. क्षणिक',s:'From a word you looked up'},
+    {tag:'Geography',q:'The Ganga rises at the _____ Glacier in Uttarakhand.',a:'Gangotri.',s:'From your highlight · Geography notes'},
+    {tag:'Poetry',q:'According to Kabir, what makes a person truly learned?',a:'The two and a half letters of love (ढाई आखर प्रेम का).',s:'From your highlight · Kabir ke Dohe'}
   ];
   var idx=0,done=0,queue=cards.slice();
   function show(){
