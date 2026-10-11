@@ -73,6 +73,12 @@ async function loadAll() {
   [S.books, S.highlights, S.cards, S.stats] = await Promise.all([db.all('books'), db.all('highlights'), db.all('cards'), db.all('stats')]);
   S.settings = { ...DEFAULT_SETTINGS, ...(await db.getKV('settings', {})) };
   for (const b of S.books) {
+    try {
+      const p = await db.getKV(`pos:${b.id}`, null);
+      if (p && (p.progress ?? 0) !== (b.progress ?? 0)) { b.position = p.position; b.progress = p.progress; }
+    } catch { /* ignore */ }
+  }
+  for (const b of S.books) {
     if (b.edited) continue;
     const t = cleanTitle(b.title, b.fileName);
     const a = cleanAuthor(b.author);
@@ -792,20 +798,25 @@ function onRelocate(info) {
   clearTimeout(R.saveT);
   R.saveT = setTimeout(savePosition, 600);
 }
-async function savePosition() {
-  if (!R.book) return;
-  R.book.position = R.pos;
-  R.book.progress = Math.max(0, Math.min(1, R.pct));
-  await db.put('books', R.book);
+async function savePosition(book = R.book) {
+  if (!book) return;
+  if (book === R.book) {
+    book.position = R.pos;
+    book.progress = Math.max(0, Math.min(1, R.pct || 0));
+  }
+  // Position is also kept in a small record of its own, so a failed book write
+  // (some browsers refuse to re-store the cover image) never loses your place.
+  try { await db.setKV(`pos:${book.id}`, { position: book.position, progress: book.progress, at: Date.now() }); } catch (e) { console.warn(e); }
+  try { await db.put('books', book); } catch (e) { console.warn('book save failed', e); }
 }
 
 async function closeReader(navigate = true) {
   if (!R.active) return;
   clearTimeout(R.saveT);
   clearInterval(R.tick);
-  await savePosition();
-  closePop();
-  closeOverlay();
+  const book = R.book;
+  if (book) { book.position = R.pos ?? book.position; book.progress = Math.max(0, Math.min(1, R.pct || 0)); }
+  try { closePop(); closeOverlay(); } catch { /* ignore */ }
   try { R.reader?.destroy(); } catch { /* ignore */ }
   R.reader = null;
   R.active = false;
@@ -815,6 +826,7 @@ async function closeReader(navigate = true) {
   rEl.hidden = true;
   document.body.style.overflow = '';
   if (navigate) go(lastShellRoute.startsWith('#/read') ? '#/library' : lastShellRoute);
+  savePosition(book);
 }
 
 function onKey(e) {

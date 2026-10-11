@@ -429,3 +429,6 @@ a.stat{transition:transform .2s}
 /* touch: we handle pinch ourselves inside the reader */
 #reader{touch-action:pan-x pan-y}
 .pdf-scroll{touch-action:pan-x pan-y}
+
+#reader .ib.back{width:auto;padding:0 14px 0 10px;gap:4px;display:inline-flex;align-items:center;font:600 14px var(--f-body)}
+@media (max-width:560px){#reader .ib.back{width:38px;padding:0}#reader .ib.back span{display:none}}
