@@ -78,7 +78,7 @@ export async function openEpub({ book, blob, host, settings, highlights, on }) {
   rendition.hooks.content.register((contents) => {
     contents.addStylesheet(FONT_CSS_URL);
     contents.addStylesheetCss(cssFor(current), 'pathak-style');
-    contents.addStylesheetCss('html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}', 'pathak-touch');
+    contents.addStylesheetCss('html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}.pk-tts{background:rgba(255,196,0,.22);border-radius:4px;box-shadow:0 0 0 4px rgba(255,196,0,.22);transition:background .3s}', 'pathak-touch');
     contents.document.addEventListener('wheel', onWheel, { passive: true });
     touchGestures(contents.document, touchOpts(contents.document));
   });
@@ -202,8 +202,83 @@ export async function openEpub({ book, blob, host, settings, highlights, on }) {
   highlights.forEach(draw);
   for (const c of rendition.getContents()) c.addStylesheetCss(cssFor(current), 'pathak-style');
 
+  // ---- read aloud helpers ----
+  const BLOCK_SEL = 'p,h1,h2,h3,h4,h5,h6,li,blockquote,dd,dt,figcaption,pre,td,th';
+  let ttsEl = null;
+  function textRangeAt(el, from, to) {
+    const doc = el.ownerDocument;
+    const w = doc.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    let pos = 0;
+    let n;
+    const r = doc.createRange();
+    let started = false;
+    while ((n = w.nextNode())) {
+      const len = n.length;
+      if (!started && from <= pos + len) { r.setStart(n, Math.max(0, from - pos)); started = true; }
+      if (started && to <= pos + len) { r.setEnd(n, Math.max(0, to - pos)); return r; }
+      pos += len;
+    }
+    return started ? r : null;
+  }
+  function ttsGroup(fromCurrent) {
+    const c = rendition.getContents()[0];
+    if (!c) return null;
+    const doc = c.document;
+    const els = [...doc.body.querySelectorAll(BLOCK_SEL)].filter((el) => !el.querySelector(BLOCK_SEL) && el.textContent.trim());
+    let start = 0;
+    if (fromCurrent) {
+      try {
+        const node = c.range(rendition.currentLocation().start.cfi).startContainer;
+        const i = els.findIndex((el) => el.contains(node) || (node.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING));
+        if (i >= 0) start = i;
+      } catch { /* start of chapter */ }
+    }
+    return { contents: c, start, blocks: els.map((el) => ({ el, text: el.textContent })) };
+  }
+
   const api = {
     kind: 'epub',
+    // Search the whole book. Calls onBatch(results) as each chapter finishes.
+    async search(q, onBatch, cancelled) {
+      let total = 0;
+      for (const item of ebook.spine.spineItems) {
+        if (cancelled()) return;
+        try {
+          await item.load(ebook.load.bind(ebook));
+          const found = item.find(q).map((m) => ({ cfi: m.cfi, excerpt: m.excerpt.replace(/\s+/g, ' ').trim(), where: chapterFor(item.href) }));
+          item.unload();
+          total += found.length;
+          if (found.length) onBatch(found);
+        } catch (e) { console.warn('search', e); }
+        if (total > 500) return;
+        await new Promise((res) => setTimeout(res, 0));
+      }
+    },
+    async showResult(res) {
+      await rendition.display(res.cfi);
+      try {
+        rendition.annotations.highlight(res.cfi, {}, null, 'pk-find', { fill: '#FF3D7F', 'fill-opacity': '0.35', 'mix-blend-mode': 'multiply' });
+        setTimeout(() => { try { rendition.annotations.remove(res.cfi, 'highlight'); } catch { /* gone */ } }, 3500);
+      } catch { /* ignore */ }
+    },
+    ttsStart: () => ttsGroup(true),
+    async ttsNext() {
+      const loc = rendition.currentLocation();
+      const next = ebook.spine.get((loc?.start?.index ?? -1) + 1);
+      if (!next) return null;
+      await rendition.display(next.href);
+      return ttsGroup(false);
+    },
+    // Highlight the paragraph being read and keep its current sentence on screen.
+    ttsShow(group, block, from, to) {
+      if (ttsEl !== block.el) { ttsEl?.classList.remove('pk-tts'); ttsEl = block.el; ttsEl.classList.add('pk-tts'); }
+      try {
+        const r = textRangeAt(block.el, from, Math.min(to, from + 1));
+        const cfi = r ? group.contents.cfiFromRange(r) : group.contents.cfiFromNode(block.el);
+        rendition.display(cfi);
+      } catch { /* ignore */ }
+    },
+    ttsClear() { ttsEl?.classList.remove('pk-tts'); ttsEl = null; },
     toc,
     get locationsReady() { return locationsReady; },
     locReady,

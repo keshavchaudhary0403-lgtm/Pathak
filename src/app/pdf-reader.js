@@ -258,6 +258,23 @@ export async function openPdf({ book, blob, host, settings, highlights, on }) {
     onScroll();
   }
 
+  // Page text, cached, for search and read aloud.
+  const texts = new Map();
+  async function pageText(i) {
+    if (texts.has(i)) return texts.get(i);
+    let t = '';
+    try {
+      const tc = await (await doc.getPage(i)).getTextContent();
+      t = tc.items.map((it) => (it.str || '') + (it.hasEOL ? '\n' : '')).join('');
+    } catch { /* ignore */ }
+    texts.set(i, t);
+    return t;
+  }
+  async function ttsPage(i) {
+    const t = (await pageText(i)).replace(/-\n(?=\p{Ll})/gu, '').replace(/\s*\n\s*/g, ' ').trim();
+    return { page: i, start: 0, blocks: t ? [{ text: t }] : [] };
+  }
+
   // Outline
   const toc = [];
   try {
@@ -293,6 +310,53 @@ export async function openPdf({ book, blob, host, settings, highlights, on }) {
     },
     goToPct: (p) => goTo({ page: Math.round(p * (n - 1)) + 1 }),
     scrollBy: (dx, dy) => scroller.scrollBy(dx, dy),
+    async search(q, onBatch, cancelled) {
+      const ql = q.toLowerCase();
+      let batch = [];
+      let total = 0;
+      for (let i = 1; i <= n; i++) {
+        if (cancelled()) return;
+        const text = (await pageText(i)).replace(/\s+/g, ' ');
+        const low = text.toLowerCase();
+        let at = low.indexOf(ql);
+        while (at !== -1 && total < 500) {
+          const a = Math.max(0, at - 60);
+          const b = Math.min(text.length, at + q.length + 60);
+          batch.push({ page: i, excerpt: `${a > 0 ? '…' : ''}${text.slice(a, b).trim()}${b < text.length ? '…' : ''}`, where: `Page ${i}` });
+          total++;
+          at = low.indexOf(ql, at + ql.length);
+        }
+        if (batch.length && (i % 5 === 0 || i === n)) { onBatch(batch); batch = []; }
+        if (i % 3 === 0) await new Promise((res) => setTimeout(res, 0));
+      }
+      if (batch.length) onBatch(batch);
+    },
+    async showResult(res, q) {
+      goTo({ page: res.page });
+      const p = pages[res.page - 1];
+      for (let t = 0; t < 30 && !p.el.querySelector('.textLayer span'); t++) await new Promise((r2) => setTimeout(r2, 100));
+      const ql = q.toLowerCase();
+      const first = ql.split(/\s+/)[0];
+      let spans = [...p.el.querySelectorAll('.textLayer span')].filter((sp) => sp.textContent.toLowerCase().includes(ql));
+      if (!spans.length) spans = [...p.el.querySelectorAll('.textLayer span')].filter((sp) => sp.textContent.toLowerCase().includes(first));
+      if (spans[0]) {
+        const pr = p.el.getBoundingClientRect();
+        const sr = spans[0].getBoundingClientRect();
+        scroller.scrollTop += sr.top - pr.top - scroller.clientHeight * 0.3 + (pr.top - scroller.getBoundingClientRect().top);
+        spans.forEach((sp) => sp.classList.add('pk-find'));
+        setTimeout(() => spans.forEach((sp) => sp.classList.remove('pk-find')), 3500);
+      }
+    },
+    async ttsStart() { return ttsPage(curPage); },
+    async ttsNext(group) {
+      for (let pg = group.page + 1; pg <= Math.min(n, group.page + 4); pg++) {
+        const g = await ttsPage(pg);
+        if (g.blocks.length) { goTo({ page: pg }); return g; }
+      }
+      return null;
+    },
+    ttsShow(group) { if (curPage !== group.page) goTo({ page: group.page }); },
+    ttsClear() {},
     get page() { return curPage; },
     // Page boxes on screen, for the snip tool.
     pageRects() {

@@ -34,6 +34,9 @@
   <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
   <symbol id="i-crop" viewBox="0 0 24 24"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M2 6h14a2 2 0 0 1 2 2v14"/></symbol>
   <symbol id="i-speaker" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></symbol>
+  <symbol id="i-headphones" viewBox="0 0 24 24"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1v-6h3zM3 19a2 2 0 0 0 2 2h1v-6H3z"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" stroke-width="3"/></symbol>
   <symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
   <symbol id="i-next" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
   <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></symbol>
@@ -85,6 +88,8 @@
   <div class="r-top">
     <button class="ib sq back" type="button" data-r="close" aria-label="Back to library"><svg class="i"><use href="#i-back"/></svg><span>Library</span></button>
     <div class="r-title"><b id="rTitle"></b><span id="rChapter"></span></div>
+    <button class="ib sq" type="button" data-r="search" aria-label="Search this book" title="Search"><svg class="i"><use href="#i-search"/></svg></button>
+    <button class="ib sq" type="button" data-r="listen" aria-label="Read aloud" title="Read aloud"><svg class="i"><use href="#i-headphones"/></svg></button>
     <button class="ib sq" type="button" data-r="toc" aria-label="Contents and highlights"><svg class="i"><use href="#i-list"/></svg></button>
     <button class="ib sq aa" type="button" data-r="settings" aria-label="Reading settings">Aa</button>
   </div>
@@ -93,6 +98,13 @@
     <div class="r-loading" id="rLoading"><div><div class="spinner"></div>Opening book…</div></div>
     <button class="navbtn l" type="button" data-r="prev" aria-label="Previous page"><svg class="i"><use href="#i-back"/></svg></button>
     <button class="navbtn r" type="button" data-r="next" aria-label="Next page"><svg class="i"><use href="#i-next"/></svg></button>
+  </div>
+  <div class="tts" id="tts" hidden role="group" aria-label="Read aloud">
+    <button type="button" data-tts="prev" aria-label="Previous sentence"><svg class="i"><use href="#i-back"/></svg></button>
+    <button type="button" class="main" data-tts="toggle" aria-label="Pause"><svg class="i"><use href="#i-pause"/></svg></button>
+    <button type="button" data-tts="next" aria-label="Next sentence"><svg class="i"><use href="#i-next"/></svg></button>
+    <button type="button" class="rate" data-tts="rate" aria-label="Reading speed">1×</button>
+    <button type="button" data-tts="stop" aria-label="Stop reading"><svg class="i"><use href="#i-x"/></svg></button>
   </div>
   <div class="r-bot">
     <input class="range" id="rRange" type="range" min="0" max="1000" value="0" aria-label="Position in book">

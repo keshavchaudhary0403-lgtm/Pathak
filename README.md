@@ -10,7 +10,9 @@ A free e-reader that runs in the browser. Live at https://pathak-woad.vercel.app
 - Dictionary: English meaning with Hindi word, and Hindi to English
 - Cards: save important sentences, sections or words; search, notes, export, share as image
 - PDF snip: drag over any part of a page (works on scanned PDFs) to save it as an image card
-- Reading streak, minutes read, activity heatmap
+- Search inside a book (EPUB and PDF), with jump-to-result
+- Read aloud with page following, paragraph highlight, speed control, Hindi and English voices
+- Reading streak and minutes read
 - Backup and restore, installable app with offline support
 
 All data stays in the browser (IndexedDB). Only DRM-free files can be opened.

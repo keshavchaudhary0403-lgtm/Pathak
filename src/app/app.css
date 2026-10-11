@@ -479,3 +479,25 @@ a.stat{transition:transform .2s}
 .dict-load{display:flex;flex-direction:column;gap:10px;padding:6px 0 10px}
 .dict-load i{display:block;height:14px;border-radius:7px;background:linear-gradient(90deg,var(--soft),var(--soft2),var(--soft));background-size:200% 100%;animation:shim 1.2s linear infinite}
 @keyframes shim{to{background-position:-200% 0}}
+
+/* search */
+.fsearch{display:block;flex:none;max-width:none;margin:0 16px 8px}
+.fhint{padding:8px 4px;font-size:14px}
+.fcount{font-size:13px;font-weight:650;color:var(--muted);padding:6px 4px 8px}
+.fres{all:unset;box-sizing:border-box;display:flex;flex-direction:column;gap:3px;width:100%;padding:11px 12px;border-radius:14px;cursor:pointer}
+.fres:hover,.fres:focus-visible{background:var(--soft)}
+.fres small{font-size:12px;font-weight:650;color:var(--a3)}
+.fres span{font:14.5px/1.5 var(--f-read);color:var(--ink);overflow-wrap:anywhere}
+.fres mark{background:color-mix(in srgb,var(--a2) 28%,transparent);color:inherit;border-radius:3px;padding:0 1px}
+.textLayer .pk-find{background:rgba(255,61,127,.35);border-radius:2px}
+/* read aloud player */
+#reader .ib.sq.on{background:var(--grad);color:#fff}
+.tts{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(132px + var(--bot));z-index:6;display:flex;align-items:center;gap:4px;padding:6px;border-radius:999px;background:#1B1724;color:#F4F1FA;box-shadow:0 16px 40px -14px rgba(0,0,0,.55);animation:popin .2s ease-out}
+#reader.immersive .tts{bottom:calc(20px + var(--bot))}
+.tts button{width:40px;height:40px;border:0;border-radius:50%;background:transparent;color:inherit;display:grid;place-items:center;cursor:pointer}
+.tts button:hover{background:rgba(255,255,255,.12)}
+.tts button svg{width:18px;height:18px}
+.tts .main{width:46px;height:46px;background:var(--grad);color:#fff}
+.tts .main:hover{background:var(--grad);filter:brightness(1.08)}
+.tts .rate{width:auto;padding:0 12px;border-radius:999px;font:700 13px var(--f-body)}
+@media (max-width:420px){#reader .r-top{gap:6px}#reader .ib.sq{width:36px;height:36px}}

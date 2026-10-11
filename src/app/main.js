@@ -739,7 +739,7 @@ async function closeReader(navigate = true) {
   clearInterval(R.tick);
   const book = R.book;
   if (book) { book.position = R.pos ?? book.position; book.progress = Math.max(0, Math.min(1, R.pct || 0)); }
-  try { closePop(); closeOverlay(); endSnip(); } catch { /* ignore */ }
+  try { closePop(); closeOverlay(); endSnip(); ttsStop(); } catch { /* ignore */ }
   try { R.reader?.destroy(); } catch { /* ignore */ }
   R.reader = null;
   R.active = false;
@@ -758,6 +758,7 @@ function onKey(e) {
     if (e.key === 'Escape') closeOverlay();
     return;
   }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault?.(); searchDrawer(); return; }
   if (e.target?.closest?.('input, textarea, select')) return;
   R.activityAt = Date.now();
   if (['ArrowRight', 'PageDown'].includes(e.key) || (e.key === ' ' && !e.shiftKey && R.reader?.kind === 'epub')) { e.preventDefault?.(); R.reader?.next(); }
@@ -781,6 +782,8 @@ rEl.addEventListener('click', (e) => {
   if (a === 'prev') R.reader?.prev();
   if (a === 'toc') tocDrawer();
   if (a === 'settings') readerSettings();
+  if (a === 'search') searchDrawer();
+  if (a === 'listen') { if (TTS.on) ttsStop(); else ttsStart(); }
   if (a === 'save') saveCardFromBar();
   if (a === 'snip') startSnip();
   if (a === 'zoomin' || a === 'zoomout') {
@@ -819,6 +822,7 @@ async function updateSettings(patch) {
   applyReaderChrome();
   if (!R.reader) return;
   if (R.reader.kind === 'epub' && prevLayout !== S.settings.layout) {
+    ttsStop();
     await savePosition();
     const id = R.book.id;
     R.reader.destroy();
@@ -1010,6 +1014,194 @@ async function copyText(t) {
   try { await navigator.clipboard.writeText(t); toast('Copied'); } catch { toast("Couldn't copy. Select the text and copy it manually."); }
 }
 document.addEventListener('pointerdown', (e) => { if (pop && !pop.el.contains(e.target) && !e.target.closest?.('.r-host, [data-r="save"]')) closePop(); }, true);
+/* ---------- search inside the book ---------- */
+const FIND = { q: '', results: [], bookId: null, run: 0, done: true };
+function markQuery(text, q) {
+  const e = esc(text);
+  if (!q) return e;
+  const re = new RegExp(esc(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+  return e.replace(re, (m) => `<mark>${m}</mark>`);
+}
+function searchDrawer() {
+  if (!R.reader) return;
+  if (FIND.bookId !== R.book.id) Object.assign(FIND, { q: '', results: [], bookId: R.book.id, done: true });
+  const dr = openDrawer(`
+    <div class="dh"><h2>Search</h2><button class="ib" type="button" data-x="close" aria-label="Close">${icon('x')}</button></div>
+    <label class="search fsearch">${icon('search')}<input class="input" id="findQ" type="search" placeholder="Search this book" value="${esc(FIND.q)}" aria-label="Search this book" autocomplete="off"></label>
+    <div class="db" id="findRes"></div>`);
+  const box = $('#findRes', dr);
+  const input = $('#findQ', dr);
+  const render = () => {
+    if (FIND.q.length < 2) { box.innerHTML = '<p class="muted fhint">Type at least two letters.</p>'; return; }
+    const n = FIND.results.length;
+    box.innerHTML = `<p class="fcount">${FIND.done ? (n ? `${n === 1 ? '1 result' : `${n}${n >= 500 ? '+' : ''} results`}` : 'No matches') : `Searching… ${n ? `${n} found` : ''}`}</p>
+      ${FIND.results.map((r2, i) => `<button class="fres" type="button" data-i="${i}"><small>${esc(r2.where || '')}</small><span>${markQuery(r2.excerpt, FIND.q)}</span></button>`).join('')}`;
+  };
+  let t;
+  const go = () => runSearch(input.value.trim(), render);
+  input.addEventListener('input', () => { clearTimeout(t); t = setTimeout(go, 400); });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { clearTimeout(t); go(); } });
+  dr.addEventListener('click', (e) => {
+    if (e.target.closest('[data-x="close"]')) { closeOverlay(); return; }
+    const b = e.target.closest('.fres');
+    if (!b) return;
+    const res = FIND.results[Number(b.dataset.i)];
+    closeOverlay();
+    R.reader.showResult(res, FIND.q);
+  });
+  render();
+  setTimeout(() => { input.focus(); input.select(); }, 60);
+}
+async function runSearch(q, render) {
+  if (q === FIND.q && (FIND.done || FIND.run)) { render(); if (FIND.done) return; }
+  const run = ++FIND.run;
+  Object.assign(FIND, { q, results: [], done: q.length < 2 });
+  render();
+  if (q.length < 2) return;
+  await R.reader.search(q, (batch) => { if (run !== FIND.run) return; FIND.results.push(...batch); render(); }, () => run !== FIND.run || !R.reader);
+  if (run !== FIND.run) return;
+  FIND.done = true;
+  render();
+}
+
+/* ---------- read aloud ---------- */
+const TTS = { on: false, paused: false, rate: 1, group: null, bi: 0, si: 0, token: 0, empty: 0, wake: null };
+const hasDeva = (t) => /[\u0900-\u097F]/.test(t);
+// Split a paragraph into speakable pieces (Chrome stops very long utterances), keeping offsets.
+function splitSentences(text) {
+  const out = [];
+  const re = /[^.!?।॥]+(?:[.!?।॥]+["'”’)\]]*|$)/g;
+  let m;
+  while ((m = re.exec(text))) {
+    if (!m[0].trim()) { if (re.lastIndex === m.index) re.lastIndex++; continue; }
+    let start = m.index;
+    let piece = m[0];
+    while (piece.length > 220) {
+      let cut = piece.lastIndexOf(',', 200);
+      if (cut < 80) cut = piece.lastIndexOf(' ', 200);
+      if (cut < 40) cut = 200;
+      out.push({ t: piece.slice(0, cut + 1).trim(), start, end: start + cut + 1 });
+      start += cut + 1;
+      piece = piece.slice(cut + 1);
+    }
+    if (piece.trim()) out.push({ t: piece.trim(), start, end: start + piece.length });
+    if (re.lastIndex === m.index) re.lastIndex++;
+  }
+  return out.filter((x) => /[\p{L}\p{N}]/u.test(x.t));
+}
+let voices = [];
+const loadVoices = () => { try { voices = speechSynthesis.getVoices(); } catch { voices = []; } };
+if ('speechSynthesis' in window) { loadVoices(); speechSynthesis.addEventListener?.('voiceschanged', loadVoices); }
+function pickVoice(lang) {
+  if (!voices.length) loadVoices();
+  const score = (v) => {
+    const l = (v.lang || '').toLowerCase();
+    let sc = 0;
+    if (lang === 'hi') { if (l.startsWith('hi')) sc += 10; else return -1; }
+    else { if (l === 'en-in') sc += 8; else if (l.startsWith('en-gb')) sc += 6; else if (l.startsWith('en')) sc += 5; else return -1; }
+    if (/google|natural|neural|premium|enhanced/i.test(v.name)) sc += 3;
+    if (v.localService) sc += 1;
+    return sc;
+  };
+  return [...voices].sort((a, b) => score(b) - score(a)).find((v) => score(v) >= 0) || null;
+}
+async function ttsStart() {
+  if (!('speechSynthesis' in window)) { toast("This browser can't read aloud."); return; }
+  if (!R.reader) return;
+  closePop();
+  TTS.rate = S.settings.ttsRate || 1;
+  const g = await R.reader.ttsStart();
+  if (!g || !g.blocks.length) {
+    if (R.reader.kind === 'pdf') {
+      const next = await R.reader.ttsNext(g || { page: R.reader.page });
+      if (!next) { toast('No readable text here. Scanned pages can’t be read aloud yet.'); return; }
+      Object.assign(TTS, { group: next, bi: 0, si: 0 });
+    } else { toast('Nothing to read on this page.'); return; }
+  } else Object.assign(TTS, { group: g, bi: g.start || 0, si: 0 });
+  Object.assign(TTS, { on: true, paused: false, empty: 0 });
+  try { TTS.wake = await navigator.wakeLock?.request('screen'); } catch { /* optional */ }
+  renderPlayer();
+  ttsSpeak();
+}
+function ttsStop() {
+  TTS.token++;
+  try { speechSynthesis.cancel(); } catch { /* ignore */ }
+  try { R.reader?.ttsClear?.(); } catch { /* ignore */ }
+  try { TTS.wake?.release(); } catch { /* ignore */ }
+  Object.assign(TTS, { on: false, paused: false, group: null, wake: null });
+  renderPlayer();
+}
+function ttsSpeak() {
+  const token = ++TTS.token;
+  const g = TTS.group;
+  if (!TTS.on || TTS.paused || !g || !R.reader) return;
+  const block = g.blocks[TTS.bi];
+  if (!block) { ttsNextGroup(token); return; }
+  block.sents ||= splitSentences(block.text);
+  if (TTS.si >= block.sents.length) { TTS.bi++; TTS.si = 0; ttsSpeak(); return; }
+  const sent = block.sents[TTS.si];
+  R.reader.ttsShow(g, block, sent.start, sent.end);
+  const u = new SpeechSynthesisUtterance(sent.t);
+  const lang = hasDeva(sent.t) ? 'hi' : 'en';
+  u.lang = lang === 'hi' ? 'hi-IN' : 'en-IN';
+  const v = pickVoice(lang);
+  if (v) u.voice = v;
+  u.rate = TTS.rate;
+  u.onend = () => { if (token !== TTS.token) return; TTS.si++; ttsSpeak(); };
+  u.onerror = (e) => { if (token !== TTS.token || e.error === 'interrupted' || e.error === 'canceled') return; TTS.si++; setTimeout(ttsSpeak, 50); };
+  speechSynthesis.cancel();
+  setTimeout(() => { if (token === TTS.token) speechSynthesis.speak(u); }, 40);
+  R.activityAt = Date.now();
+}
+async function ttsNextGroup(token) {
+  const next = await R.reader?.ttsNext(TTS.group);
+  if (token !== TTS.token) return;
+  if (!next) { ttsStop(); toast('Finished reading aloud'); return; }
+  Object.assign(TTS, { group: next, bi: 0, si: 0 });
+  ttsSpeak();
+}
+function ttsSkip(dir) {
+  if (!TTS.group) return;
+  const block = TTS.group.blocks[TTS.bi];
+  if (dir > 0) { TTS.si++; }
+  else if (TTS.si > 0) { TTS.si--; }
+  else if (TTS.bi > 0) { TTS.bi--; const b = TTS.group.blocks[TTS.bi]; b.sents ||= splitSentences(b.text); TTS.si = Math.max(0, b.sents.length - 1); }
+  if (block && TTS.si >= (block.sents?.length || 0) && dir > 0) { TTS.bi++; TTS.si = 0; }
+  TTS.paused = false;
+  renderPlayer();
+  ttsSpeak();
+}
+function renderPlayer() {
+  const el = $('#tts');
+  el.hidden = !TTS.on;
+  rEl.classList.toggle('tts-on', TTS.on);
+  $('[data-r="listen"]')?.classList.toggle('on', TTS.on);
+  if (!TTS.on) return;
+  $('[data-tts="toggle"]', el).innerHTML = icon(TTS.paused ? 'play' : 'pause');
+  $('[data-tts="toggle"]', el).setAttribute('aria-label', TTS.paused ? 'Resume' : 'Pause');
+  $('[data-tts="rate"]', el).textContent = `${TTS.rate}×`;
+}
+$('#tts').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-tts]');
+  if (!b) return;
+  const a = b.dataset.tts;
+  if (a === 'stop') ttsStop();
+  if (a === 'toggle') {
+    if (TTS.paused) { TTS.paused = false; renderPlayer(); ttsSpeak(); }
+    else { TTS.paused = true; TTS.token++; speechSynthesis.cancel(); renderPlayer(); }
+  }
+  if (a === 'prev') ttsSkip(-1);
+  if (a === 'next') ttsSkip(1);
+  if (a === 'rate') {
+    const rates = [0.75, 1, 1.25, 1.5, 2];
+    TTS.rate = rates[(rates.indexOf(TTS.rate) + 1) % rates.length];
+    S.settings.ttsRate = TTS.rate;
+    db.setKV('settings', S.settings);
+    renderPlayer();
+    if (!TTS.paused) ttsSpeak();
+  }
+});
+
 /* ---------- snip (PDF): capture a region as an image card ---------- */
 let snipEl = null;
 function endSnip() { snipEl?.remove(); snipEl = null; }
