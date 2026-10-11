@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Pathak is a free browser e-reader for EPUB and PDF with highlights, a Hindi-English dictionary and flashcards from your highlights.">
+<meta name="theme-color" content="#0C0A12">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1'%3E%3Cstop offset='0' stop-color='%23FF8A1F'/%3E%3Cstop offset='.5' stop-color='%23FF3D7F'/%3E%3Cstop offset='1' stop-color='%237B5CFF'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Ctext x='32' y='46' font-size='38' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='700'%3E%E0%A4%AA%3C/text%3E%3C/svg%3E">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+<title>Pathak Reader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Hanken+Grotesk:wght@400;500;600;700&family=Literata:opsz,wght@7..72,400;7..72,500&family=Mukta:wght@400;500;700&family=Tiro+Devanagari+Hindi&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: floating glass nav over a drifting aurora; hero = headline + live phone app; bento feature grid; interactive review deck; gradient CTA */
+:root{
+  --bg:#F5F3FA; --surface:#FFFFFF; --glass:rgba(255,255,255,.66); --glass-line:rgba(255,255,255,.8);
+  --ink:#15121E; --muted:#676179; --line:rgba(21,18,30,.09); --soft:#EEEAF7;
+  --a1:#FF8A1F; --a2:#FF3D7F; --a3:#7B5CFF; --ok:#12B886; --mark:#FFD43B; --mark-ink:#15121E;
+  --blob-o:.55; --shadow:0 30px 70px -36px rgba(52,24,110,.45); --shadow-s:0 10px 30px -18px rgba(52,24,110,.35);
+  --grad:linear-gradient(100deg,var(--a1),var(--a2) 52%,var(--a3));
+  --rd-paper-bg:#FBFAF7; --rd-paper-fg:#1E1C24;
+  --rd-sepia-bg:#F4E9D3; --rd-sepia-fg:#3E3022;
+  --rd-night-bg:#121017; --rd-night-fg:#DCD8E4;
+  --f-display:"Bricolage Grotesque","Hanken Grotesk",system-ui,sans-serif;
+  --f-body:"Hanken Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-read:"Literata",Georgia,serif;
+  --f-deva:"Mukta","Noto Sans Devanagari",sans-serif;
+  --f-deva-read:"Tiro Devanagari Hindi","Noto Serif Devanagari",serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0C0A12; --surface:#17131F; --glass:rgba(27,22,38,.62); --glass-line:rgba(255,255,255,.07);
+  --ink:#F4F1FA; --muted:#A49EB5; --line:rgba(255,255,255,.08); --soft:#1D1828;
+  --a1:#FF9A3D; --a2:#FF5C93; --a3:#9B85FF; --ok:#3DD6A3; --mark:#E8B923; --mark-ink:#15121E;
+  --blob-o:.32; --shadow:0 30px 80px -36px rgba(0,0,0,.8); --shadow-s:0 10px 30px -18px rgba(0,0,0,.7); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0C0A12; --surface:#17131F; --glass:rgba(27,22,38,.62); --glass-line:rgba(255,255,255,.07);
+  --ink:#F4F1FA; --muted:#A49EB5; --line:rgba(255,255,255,.08); --soft:#1D1828;
+  --a1:#FF9A3D; --a2:#FF5C93; --a3:#9B85FF; --ok:#3DD6A3; --mark:#E8B923; --mark-ink:#15121E;
+  --blob-o:.32; --shadow:0 30px 80px -36px rgba(0,0,0,.8); --shadow-s:0 10px 30px -18px rgba(0,0,0,.7); color-scheme:dark}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16.5px;line-height:1.6;padding-inline:18px;padding-block:0;overflow-x:hidden}
+.wrap{max-width:1180px;margin:0 auto}
+:focus-visible{outline:2px solid var(--a3);outline-offset:3px;border-radius:8px}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:-.025em}
+h1{font-size:clamp(2.6rem,6.4vw,5.1rem);line-height:.98;font-weight:750}
+h2{font-size:clamp(2rem,4.4vw,3.3rem);line-height:1.02;font-weight:720}
+h3{font-size:1.2rem;font-weight:650;letter-spacing:-.01em}
+p{margin:0}
+.grad-text{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.02em}
+.mono{font-family:var(--f-mono);font-size:12px;font-variant-numeric:tabular-nums}
+.deva{font-family:var(--f-deva)}
+svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.glass{background:var(--glass);border:1px solid var(--glass-line);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4)}
+
+/* aurora */
+.aurora{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.aurora span{position:absolute;border-radius:50%;filter:blur(80px);opacity:var(--blob-o);animation:drift 22s ease-in-out infinite alternate}
+.aurora span:nth-child(1){width:46vw;height:46vw;left:-10vw;top:-14vw;background:var(--a1)}
+.aurora span:nth-child(2){width:40vw;height:40vw;right:-8vw;top:4vw;background:var(--a3);animation-duration:26s}
+.aurora span:nth-child(3){width:34vw;height:34vw;left:30vw;top:30vw;background:var(--a2);animation-duration:30s}
+@keyframes drift{to{transform:translate(6vw,8vw) scale(1.15)}}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:9px;font:650 15px/1 var(--f-body);padding:15px 22px;border-radius:999px;text-decoration:none;cursor:pointer;border:0;transition:transform .2s,box-shadow .2s}
+.btn.primary{background:var(--ink);color:var(--bg);box-shadow:var(--shadow-s)}
+.btn.primary .dot{width:8px;height:8px;border-radius:50%;background:var(--grad)}
+.btn.sec{color:var(--ink)}
+.btn:hover{transform:translateY(-2px)}
+
+/* nav */
+.navwrap{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;padding-top:14px}
+nav.top{display:flex;align-items:center;gap:20px;padding:9px 9px 9px 18px;border-radius:999px;box-shadow:var(--shadow-s)}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);font-family:var(--f-display);font-weight:750;font-size:20px;letter-spacing:-.02em}
+.logo{width:30px;height:30px;border-radius:9px;background:var(--grad);display:grid;place-items:center;color:#fff;font-family:var(--f-deva);font-weight:700;font-size:18px;line-height:1;padding-top:3px}
+nav.top ul{display:flex;gap:4px;list-style:none;margin:0 0 0 auto;padding:0}
+nav.top ul a{display:block;padding:9px 14px;border-radius:999px;color:var(--muted);text-decoration:none;font-weight:550;font-size:15px}
+nav.top ul a:hover{background:var(--soft);color:var(--ink)}
+nav.top .btn{padding:12px 18px;font-size:14px}
+.themebtn{width:42px;height:42px;border-radius:50%;border:0;display:grid;place-items:center;cursor:pointer;background:var(--soft);color:var(--ink);transition:transform .3s}
+.themebtn:hover{transform:rotate(-20deg)}
+.themebtn .sun{display:none}
+:root[data-mode="dark"] .themebtn .sun{display:block}
+:root[data-mode="dark"] .themebtn .moon{display:none}
+@media (max-width:820px){nav.top ul{display:none}nav.top .themebtn{margin-left:auto}}
+
+/* hero */
+.hero{display:grid;grid-template-columns:1.08fr .92fr;gap:40px;align-items:center;padding-block:64px 80px}
+.hero>*{min-width:0}
+.pill{display:inline-flex;align-items:center;gap:10px;padding:6px 14px 6px 6px;border-radius:999px;font-size:14px;font-weight:550;box-shadow:var(--shadow-s)}
+.pill b{background:var(--grad);color:#fff;font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px}
+.hero h1{margin-top:22px}
+.lede{font-size:1.18rem;color:var(--muted);max-width:32em;margin-top:22px}
+.ctas{display:flex;gap:12px;flex-wrap:wrap;margin-top:32px}
+.trust{display:flex;gap:8px;flex-wrap:wrap;margin-top:28px}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:999px;font-size:13.5px;font-weight:550;color:var(--muted)}
+.chip svg.i{width:16px;height:16px;color:var(--a2)}
+@media (max-width:940px){.hero{grid-template-columns:1fr;padding-block:44px 64px}}
+
+/* phone */
+.stage{position:relative;display:grid;place-items:center;padding:20px 0}
+.phone{width:310px;max-width:100%;border-radius:48px;padding:10px;background:linear-gradient(160deg,#2A2533,#0F0D14);box-shadow:var(--shadow),inset 0 0 0 1.5px rgba(255,255,255,.12);animation:float 7s ease-in-out infinite;position:relative;z-index:2}
+@keyframes float{50%{transform:translateY(-12px) rotate(-.6deg)}}
+.screen{border-radius:39px;overflow:hidden;height:620px;display:flex;flex-direction:column;background:var(--rd-paper-bg);color:var(--rd-paper-fg);transition:background .35s,color .35s;position:relative;font-family:var(--f-body)}
+.screen[data-rt="sepia"]{background:var(--rd-sepia-bg);color:var(--rd-sepia-fg)}
+.screen[data-rt="night"]{background:var(--rd-night-bg);color:var(--rd-night-fg)}
+.sbar{display:flex;justify-content:space-between;align-items:center;padding:14px 26px 4px;font-size:13px;font-weight:650}
+.island{width:92px;height:26px;border-radius:20px;background:#0B0A0E}
+.appbar{display:flex;align-items:center;gap:10px;padding:10px 18px 6px}
+.appbar .t{flex:1;min-width:0}
+.appbar .t b{display:block;font-size:14px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.appbar .t span{font-size:11.5px;opacity:.6}
+.ib{width:34px;height:34px;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,currentColor 7%,transparent);color:inherit;border:0;cursor:pointer;font:700 13px var(--f-body)}
+.ib svg.i{width:17px;height:17px}
+.content{flex:1;overflow:hidden;padding:12px 22px 0;font-family:var(--f-read)}
+.content .ch{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;opacity:.55}
+.content h4{font-family:var(--f-read);font-size:21px;font-weight:500;margin:6px 0 12px;letter-spacing:-.01em}
+.content p{font-size:15px;line-height:1.72}
+.content p+p{margin-top:10px}
+.hl{background:linear-gradient(color-mix(in srgb,var(--mark) 75%,transparent),color-mix(in srgb,var(--mark) 75%,transparent)) no-repeat 0 100%/0% 100%;animation:sweep 1.2s .7s cubic-bezier(.6,.1,.2,1) forwards;border-radius:3px;padding:1px 1px}
+.screen[data-rt="night"] .hl{background-image:linear-gradient(rgba(232,185,35,.42),rgba(232,185,35,.42))}
+@keyframes sweep{to{background-size:100% 100%}}
+.word{font:inherit;color:inherit;background:none;border:0;padding:0;border-bottom:2px dotted var(--a2);cursor:pointer}
+.fade{height:40px;margin-top:-40px;position:relative;background:linear-gradient(transparent,currentColor);opacity:0}
+.botbar{padding:10px 18px 18px;display:flex;flex-direction:column;gap:10px}
+.prog{height:4px;border-radius:4px;background:color-mix(in srgb,currentColor 12%,transparent);overflow:hidden}
+.prog i{display:block;height:100%;width:38%;border-radius:4px;background:var(--grad)}
+.binfo{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:10.5px;opacity:.65}
+.brow{display:flex;justify-content:space-between;align-items:center}
+.sw{display:flex;gap:8px}
+.sw button{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18)}
+.sw button[aria-pressed="true"]{border-color:var(--a2)}
+.sw [data-t="paper"]{background:var(--rd-paper-bg)}
+.sw [data-t="sepia"]{background:var(--rd-sepia-bg)}
+.sw [data-t="night"]{background:var(--rd-night-bg)}
+.cardbtn{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:999px;padding:9px 14px;background:var(--grad);color:#fff;font:700 13px var(--f-body);cursor:pointer;box-shadow:0 8px 18px -8px var(--a2)}
+.cardbtn svg.i{width:15px;height:15px}
+.sheet{position:absolute;left:8px;right:8px;bottom:8px;border-radius:30px;padding:10px 18px 18px;background:var(--surface);color:var(--ink);box-shadow:0 -10px 40px -10px rgba(0,0,0,.35);transform:translateY(110%);transition:transform .45s cubic-bezier(.2,.9,.2,1);z-index:3}
+.sheet.open{transform:none}
+.grab{width:38px;height:5px;border-radius:5px;background:var(--line);margin:0 auto 12px}
+.sheet .w{font-family:var(--f-display);font-size:24px;font-weight:700;letter-spacing:-.02em}
+.sheet .pos{font-size:12.5px;color:var(--muted);margin-left:6px;font-weight:500}
+.sheet p{font-size:14px;color:var(--muted);margin-top:4px}
+.hin{display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px 12px;border-radius:14px;background:var(--soft)}
+.hin .deva{font-size:19px;font-weight:600}
+.hin span:last-child{font-size:11px;color:var(--muted);margin-left:auto}
+.sheet .acts{display:flex;gap:8px;margin-top:14px}
+.sheet .acts button{flex:1;border-radius:14px;padding:11px;font:650 13.5px var(--f-body);cursor:pointer;border:0}
+.sheet .acts .p{background:var(--ink);color:var(--surface)}
+.sheet .acts .s{background:var(--soft);color:var(--ink)}
+.toast{position:absolute;left:50%;top:64px;transform:translate(-50%,-20px);opacity:0;transition:.35s;z-index:4;background:var(--ink);color:var(--surface);font-size:12.5px;font-weight:650;padding:9px 14px;border-radius:999px;white-space:nowrap;display:flex;gap:7px;align-items:center}
+.toast.show{transform:translate(-50%,0);opacity:1}
+.toast svg.i{width:15px;height:15px;color:var(--ok)}
+
+.float{position:absolute;z-index:3;border-radius:18px;padding:11px 14px;display:flex;align-items:center;gap:11px;box-shadow:var(--shadow-s);animation:float 8s ease-in-out infinite}
+.float .ic{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;color:#fff}
+.float b{display:block;font-size:14px;line-height:1.2}
+.float small{font-size:12px;color:var(--muted)}
+.f1{left:-4%;top:12%;animation-delay:-2s}.f1 .ic{background:linear-gradient(135deg,var(--a1),var(--a2))}
+.f2{right:-4%;top:40%;animation-delay:-4s}.f2 .ic{background:linear-gradient(135deg,var(--a3),var(--a2))}
+.f3{left:2%;bottom:10%;animation-delay:-1s}.f3 .ic{background:linear-gradient(135deg,var(--ok),#0EA5E9)}
+.f3 .deva{font-size:16px;font-weight:700}
+.bump{animation:bump .5s}
+@keyframes bump{40%{transform:scale(1.08)}}
+@media (max-width:620px){.float{display:none}}
+
+/* sections */
+section{padding-block:84px}
+.shead{max-width:760px;margin-bottom:44px}
+.shead .lead{font-size:1.12rem;color:var(--muted);margin-top:16px;max-width:36em}
+.shead .eyebrow{margin-bottom:14px}
+.eyebrow .tick{width:22px;height:2px;border-radius:2px;background:var(--grad)}
+
+/* bento */
+.bento{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:minmax(200px,auto);gap:16px}
+.tile{border-radius:28px;padding:26px;display:flex;flex-direction:column;gap:10px;min-width:0;position:relative;overflow:hidden;box-shadow:var(--shadow-s);transition:transform .3s}
+.tile:hover{transform:translateY(-4px)}
+.tile p{color:var(--muted);font-size:15px}
+.tile .tic{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:var(--soft);color:var(--a2);margin-bottom:6px}
+.t-a{grid-column:span 2;grid-row:span 2}
+.t-b,.t-e,.t-f{grid-column:span 2}
+.vis{margin-top:auto;padding-top:14px}
+@media (max-width:900px){.bento{grid-template-columns:repeat(2,1fr)}.t-a{grid-row:auto}}
+@media (max-width:580px){.bento{grid-template-columns:1fr}.t-a,.t-b,.t-e,.t-f{grid-column:auto}}
+
+.hls{display:flex;flex-direction:column;gap:10px}
+.hlc{background:var(--surface);border-radius:16px;padding:13px 15px;font-family:var(--f-read);font-size:14.5px;line-height:1.55;border-left:4px solid var(--c);box-shadow:0 1px 0 var(--line)}
+.hlc small{display:block;font-family:var(--f-body);font-size:12px;color:var(--muted);margin-top:6px}
+.colors{display:flex;gap:8px;margin-bottom:4px}
+.colors i{width:22px;height:22px;border-radius:50%;background:var(--c);box-shadow:inset 0 0 0 2px rgba(255,255,255,.4)}
+.dict{background:var(--surface);border-radius:18px;padding:16px 18px;display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap}
+.dict .w{font-family:var(--f-display);font-weight:700;font-size:22px}
+.dict .deva{font-size:24px;font-weight:700}
+.ring{display:flex;align-items:center;gap:14px}
+.ring svg{width:84px;height:84px;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:9}
+.ring .bgc{stroke:var(--soft)}
+.ring .fg{stroke:url(#rg);stroke-linecap:round;stroke-dasharray:226;stroke-dashoffset:226;animation:ring 1.6s .4s ease-out forwards}
+@keyframes ring{to{stroke-dashoffset:140}}
+.ring b{font-family:var(--f-display);font-size:30px;font-weight:750;display:block;line-height:1}
+.ring small{font-size:12px;color:var(--muted)}
+.themes{display:flex;gap:8px}
+.themes span{flex:1;height:56px;border-radius:14px;display:grid;place-items:center;font-family:var(--f-read);font-size:20px;box-shadow:inset 0 0 0 1px var(--line)}
+.devs{display:flex;align-items:flex-end;gap:14px}
+.dv{border-radius:12px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line);display:flex;flex-direction:column;justify-content:flex-end;padding:8px}
+.dv i{display:block;height:4px;border-radius:4px;background:var(--grad)}
+.dv.lap{width:150px;height:94px}.dv.lap i{width:62%}
+.dv.ph{width:52px;height:96px;border-radius:14px}.dv.ph i{width:62%}
+.dv.tab{width:96px;height:120px}.dv.tab i{width:62%}
+.syncl{font-size:12.5px;color:var(--muted);margin-left:auto;align-self:center;display:flex;align-items:center;gap:6px}
+.syncl i{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 var(--ok);animation:ping 2s infinite}
+@keyframes ping{70%{box-shadow:0 0 0 8px transparent}}
+.files{display:flex;gap:12px;flex-wrap:wrap}
+.file{width:72px;height:88px;border-radius:12px;background:var(--surface);position:relative;display:grid;place-items:end center;padding-bottom:10px;font:700 12px var(--f-mono);box-shadow:inset 0 0 0 1.5px var(--line)}
+.file::before{content:"";position:absolute;top:10px;left:12px;right:12px;height:30px;border-radius:6px;background:var(--c);opacity:.85}
+.drop{flex:1;min-width:140px;border:2px dashed var(--line);border-radius:14px;display:grid;place-items:center;color:var(--muted);font-size:13.5px;font-weight:550;padding:10px;text-align:center}
+
+/* hindi */
+.hindi{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:center}
+.hindi>*{min-width:0}
+.marquee{overflow:hidden;margin-top:30px;mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent)}
+.track{display:flex;gap:10px;width:max-content;animation:mq 28s linear infinite}
+@keyframes mq{to{transform:translateX(-50%)}}
+.lg{display:inline-flex;align-items:center;gap:10px;padding:10px 16px;border-radius:999px;font-weight:600;white-space:nowrap}
+.lg .s{font-size:18px}
+.lg em{font-style:normal;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--soft);color:var(--muted)}
+.lg em.on{background:var(--grad);color:#fff}
+.bookpage{border-radius:32px;padding:30px;box-shadow:var(--shadow)}
+.tog{display:inline-flex;padding:4px;border-radius:999px;background:var(--soft);margin-bottom:22px}
+.tog button{border:0;background:transparent;border-radius:999px;padding:8px 16px;font:650 14px var(--f-body);color:var(--muted);cursor:pointer}
+.tog button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow-s)}
+.bp-text{font-size:1.4rem;line-height:1.85;min-height:7.5em}
+.bp-text.hi{font-family:var(--f-deva-read)}
+.bp-text.en{font-family:var(--f-read);font-size:1.25rem;line-height:1.75}
+.bp-text mark{background:color-mix(in srgb,var(--mark) 70%,transparent);color:inherit;border-radius:4px;padding:0 4px}
+.bp-foot{display:flex;justify-content:space-between;gap:10px;margin-top:16px;color:var(--muted);font-size:13px;flex-wrap:wrap}
+@media (max-width:900px){.hindi{grid-template-columns:1fr}}
+
+/* exam */
+.exam{display:grid;grid-template-columns:.9fr 1.1fr;gap:28px;align-items:start}
+.exam>*{min-width:0}
+.steps{display:flex;flex-direction:column;gap:12px;margin-top:8px}
+.step{display:flex;gap:16px;padding:18px;border-radius:22px;align-items:flex-start}
+.step .n{width:36px;height:36px;border-radius:12px;flex:none;display:grid;place-items:center;font:750 15px var(--f-display);color:#fff;background:var(--grad)}
+.step p{color:var(--muted);font-size:15px;margin-top:3px}
+.deck{border-radius:32px;padding:26px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:18px}
+.deckhead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.deckhead b{font-family:var(--f-display);font-size:19px;font-weight:700}
+.due{display:flex;gap:6px}
+.due span{font-size:12.5px;font-weight:650;padding:6px 11px;border-radius:999px;background:var(--soft);color:var(--muted)}
+.due span b{font-size:12.5px;color:var(--ink);font-family:var(--f-body);font-variant-numeric:tabular-nums}
+.qcard{border-radius:24px;padding:26px;background:var(--surface);min-height:210px;display:flex;flex-direction:column;gap:14px;box-shadow:0 2px 0 var(--line),0 14px 0 -6px color-mix(in srgb,var(--surface) 70%,transparent),0 26px 0 -12px color-mix(in srgb,var(--surface) 45%,transparent);transition:transform .35s,opacity .35s}
+.qcard.out{transform:translateX(40px) rotate(4deg);opacity:0}
+.qtag{font-size:12px;font-weight:700;color:var(--a3);text-transform:uppercase;letter-spacing:.08em}
+.qq{font-family:var(--f-display);font-size:1.45rem;font-weight:650;line-height:1.2;letter-spacing:-.015em}
+.qa{font-size:1.05rem;padding:12px 14px;border-radius:14px;background:var(--soft)}
+.qsrc{font-size:12.5px;color:var(--muted);margin-top:auto}
+.grade{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.grade button,.reveal{border:0;border-radius:16px;padding:13px 8px;font:650 14.5px var(--f-body);cursor:pointer;color:var(--ink);background:var(--soft);display:flex;flex-direction:column;align-items:center;gap:2px}
+.grade button small{font-size:11.5px;font-weight:500;color:var(--muted)}
+.grade .again{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--a2) 55%,transparent)}
+.grade .good{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--ok) 55%,transparent)}
+.grade .easy{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--a3) 55%,transparent)}
+.reveal{width:100%;background:var(--ink);color:var(--surface);flex-direction:row;justify-content:center}
+.heat{display:grid;grid-template-columns:repeat(21,1fr);gap:4px}
+.heat i{aspect-ratio:1;border-radius:3px;background:var(--soft)}
+.heat i[data-l="1"]{background:color-mix(in srgb,var(--a2) 30%,var(--soft))}
+.heat i[data-l="2"]{background:color-mix(in srgb,var(--a2) 60%,var(--soft))}
+.heat i[data-l="3"]{background:var(--a2)}
+.streak{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:8px}
+.streak b{color:var(--ink)}
+@media (max-width:900px){.exam{grid-template-columns:1fr}}
+
+/* sources */
+.srcs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.src{border-radius:24px;padding:20px;display:flex;gap:14px;align-items:flex-start;min-width:0;transition:transform .25s}
+.src:hover{transform:translateY(-3px)}
+.mono-l{width:46px;height:46px;border-radius:15px;flex:none;display:grid;place-items:center;font:750 18px var(--f-display);color:#fff;background:var(--c)}
+.src div{min-width:0}
+.src p{color:var(--muted);font-size:14.5px;margin-top:3px}
+.src .tg{font-size:11.5px;font-weight:700;color:var(--a3);margin-top:8px;display:inline-block}
+.info{margin-top:18px;border-radius:22px;padding:18px 20px;display:flex;gap:14px;align-items:flex-start}
+.info svg.i{color:var(--a1);margin-top:2px}
+.info p{color:var(--muted);font-size:15px}
+.info b{color:var(--ink)}
+@media (max-width:900px){.srcs{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:580px){.srcs{grid-template-columns:1fr}}
+
+/* cta */
+.cta{border-radius:40px;padding:clamp(32px,6vw,72px);background:linear-gradient(120deg,var(--a2),var(--a3) 60%,#4B32D8);color:#fff;position:relative;overflow:hidden;display:flex;justify-content:space-between;align-items:flex-end;gap:28px;flex-wrap:wrap}
+.cta::after{content:"";position:absolute;width:420px;height:420px;border-radius:50%;right:-120px;top:-180px;background:radial-gradient(circle,rgba(255,170,80,.75),transparent 65%)}
+.cta>*{position:relative;z-index:1;min-width:0}
+.cta h2{max-width:13em}
+.cta p{opacity:.88;margin-top:14px;max-width:32em;font-size:1.08rem}
+.cta .btn.primary{background:#fff;color:#1A1230}
+.cta .btn.sec{color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3)}
+footer{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding-block:36px 44px;color:var(--muted);font-size:14px}
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.hl{background-size:100% 100%}.ring .fg{stroke-dashoffset:140}}
+</style>
+</head>
+<body>
+
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs><linearGradient id="rg" x1="0" x2="1"><stop offset="0" stop-color="#FF8A1F"/><stop offset=".5" stop-color="#FF3D7F"/><stop offset="1" stop-color="#7B5CFF"/></linearGradient></defs>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5"/><path d="M8 7h7"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="m15 5 4 4"/><path d="M4 20l1-5L16 4l4 4L9 19z"/></symbol>
+  <symbol id="i-lang" viewBox="0 0 24 24"><path d="M4 5h8M8 3v2m2.5 0c-.8 4-3.4 7-6.5 8.5"/><path d="M6 9c1 2 3 3.6 5 4.4"/><path d="m13 20 4-9 4 9m-6.8-3h5.6"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-sync" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.6-4.5L4 8"/><path d="M4 3v5h5"/><path d="M4 13a8 8 0 0 0 14.6 4.5L20 16"/><path d="M20 21v-5h-5"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4 6.5 6.5 0 0 0 20 14.5z"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 21c4 0 7-2.7 7-6.6 0-3.9-3-6.4-4.5-9.4-.8 2.2-2 3.4-3.5 4.2C10 7 9.5 5 10 3 6.5 5.5 5 9.5 5 14.4 5 18.3 8 21 12 21z"/></symbol>
+  <symbol id="i-cards" viewBox="0 0 24 24"><rect x="3" y="7" width="14" height="13" rx="2.5"/><path d="M7 7V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-2"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M11 18h2"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 3 5 13h6l-1 8 8-10h-6z"/></symbol>
+</svg>
+
+<div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
+
+<div class="navwrap wrap">
+  <nav class="top glass" aria-label="Main">
+    <a class="brand" href="#top"><span class="logo">प</span>Pathak</a>
+    <ul>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#hindi">Hindi</a></li>
+      <li><a href="#exam">Exam prep</a></li>
+      <li><a href="#library">Free books</a></li>
+    </ul>
+    <button class="themebtn" type="button" id="themeBtn" aria-label="Switch to light theme"><svg class="i moon"><use href="#i-moon"/></svg><svg class="i sun"><use href="#i-sun"/></svg></button>
+    <a class="btn primary" href="#start"><span class="dot"></span>Open reader</a>
+  </nav>
+</div>
+
+<main class="wrap" id="top">
+  <header class="hero">
+    <div>
+      <span class="pill glass"><b>NEW</b>The reader made for India · free</span>
+      <h1>Read anything.<br><span class="grad-text">Remember everything.</span></h1>
+      <p class="lede">Pathak turns your phone or laptop into a beautiful e-reader. Open EPUB and PDF, highlight as you go, tap any word for its Hindi meaning, and let your highlights become flashcards.</p>
+      <div class="ctas">
+        <a class="btn primary" href="#start"><span class="dot"></span>Start reading free</a>
+        <a class="btn sec glass" href="#exam">See flashcards<svg class="i"><use href="#i-arrow"/></svg></a>
+      </div>
+      <div class="trust">
+        <span class="chip glass"><svg class="i"><use href="#i-file"/></svg>EPUB &amp; PDF</span>
+        <span class="chip glass"><svg class="i"><use href="#i-phone"/></svg>Installs like an app</span>
+        <span class="chip glass"><svg class="i"><use href="#i-lang"/></svg>Hindi + English</span>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="float glass f1"><span class="ic"><svg class="i"><use href="#i-flame"/></svg></span><div><b>12-day streak</b><small>Keep it going</small></div></div>
+      <div class="float glass f2" id="dueChip"><span class="ic"><svg class="i"><use href="#i-cards"/></svg></span><div><b id="dueTxt">64 cards</b><small id="dueSub">due today</small></div></div>
+      <div class="float glass f3"><span class="ic"><svg class="i"><use href="#i-lang"/></svg></span><div><b class="deva">स्वतंत्रता</b><small>liberty · noun</small></div></div>
+
+      <div class="phone" aria-label="Pathak app preview">
+        <div class="screen" id="screen" data-rt="paper">
+          <div class="sbar"><span>9:41</span><span class="island"></span><span>5G</span></div>
+          <div class="appbar">
+            <button class="ib" type="button" aria-label="Back"><svg class="i"><use href="#i-back"/></svg></button>
+            <div class="t"><b>Indian Polity</b><span>Chapter 7 of 22</span></div>
+            <button class="ib" type="button" aria-label="Text settings">Aa</button>
+          </div>
+          <div class="content">
+            <div class="ch">Chapter 7</div>
+            <h4>Fundamental Rights</h4>
+            <p>Part III of the Constitution lists the rights every person can enforce in court. One article has grown wider than any other through judicial reading.</p>
+            <p><span class="hl">Article 21: No person shall be deprived of his life or personal <button class="word" type="button" id="w" aria-haspopup="dialog" aria-controls="sheet">liberty</button> except according to procedure established by law.</span></p>
+            <p>The Supreme Court has read into it the right to privacy, to a clean environment and to a speedy trial.</p>
+          </div>
+          <div class="botbar">
+            <div class="prog"><i></i></div>
+            <div class="binfo"><span>Loc 1,204</span><span>12 min left in chapter</span><span>38%</span></div>
+            <div class="brow">
+              <div class="sw" role="group" aria-label="Reading theme">
+                <button type="button" data-t="paper" aria-pressed="true" aria-label="Paper theme"></button>
+                <button type="button" data-t="sepia" aria-pressed="false" aria-label="Sepia theme"></button>
+                <button type="button" data-t="night" aria-pressed="false" aria-label="Night theme"></button>
+              </div>
+              <button class="cardbtn" type="button" id="mk"><svg class="i"><use href="#i-plus"/></svg>Make card</button>
+            </div>
+          </div>
+          <div class="toast" id="toast" role="status"><svg class="i"><use href="#i-check"/></svg><span id="toastTxt">Added to Polity deck</span></div>
+          <div class="sheet" id="sheet" role="dialog" aria-label="Dictionary">
+            <div class="grab"></div>
+            <div><span class="w">liberty</span><span class="pos">noun · /ˈlɪb.ə.ti/</span></div>
+            <p>Freedom from arbitrary control by the state or any authority.</p>
+            <div class="hin"><span class="deva">स्वतंत्रता</span><span class="deva" style="font-size:15px;opacity:.7">आज़ादी</span><span>Hindi</span></div>
+            <div class="acts"><button class="s" type="button" id="closeSheet">Close</button><button class="p" type="button" id="addWord">Add to cards</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section id="features">
+    <div class="shead">
+      <span class="eyebrow"><span class="tick"></span>Everything a Kindle does</span>
+      <h2>All the reading tools.<br>None of the hardware.</h2>
+      <p class="lead">The features people actually use every day, in the browser you already have. Add it to your home screen and it opens like any other app.</p>
+    </div>
+    <div class="bento">
+      <div class="tile glass t-a">
+        <span class="tic"><svg class="i"><use href="#i-pen"/></svg></span>
+        <h3>Highlights and notes</h3>
+        <p>Four colours, a note on any line, and one searchable list of everything you marked. Export it all as Markdown.</p>
+        <div class="vis hls">
+          <div class="colors"><i style="--c:#FFD43B"></i><i style="--c:#FF6B9A"></i><i style="--c:#5BC0EB"></i><i style="--c:#7EE081"></i></div>
+          <div class="hlc" style="--c:#FFD43B">The Preamble was amended once, by the 42nd Amendment in 1976.<small>Indian Polity · p. 34 · Note: likely prelims</small></div>
+          <div class="hlc" style="--c:#FF6B9A">Fundamental Duties were added in Part IV-A.<small>Indian Polity · p. 112</small></div>
+          <div class="hlc" style="--c:#5BC0EB">The Battle of Plassey in 1757 began British political control in Bengal.<small>Modern India · p. 18</small></div>
+        </div>
+      </div>
+      <div class="tile glass t-b">
+        <span class="tic"><svg class="i"><use href="#i-lang"/></svg></span>
+        <h3>Tap any word, get the meaning</h3>
+        <p>English definition with the Hindi word underneath. Works the other way for Hindi books.</p>
+        <div class="vis dict"><div><span class="w">sovereign</span><p style="font-size:13px;margin-top:2px">adj · supreme, independent</p></div><span class="deva">संप्रभु</span></div>
+      </div>
+      <div class="tile glass">
+        <span class="tic"><svg class="i"><use href="#i-clock"/></svg></span>
+        <h3>Know where you are</h3>
+        <div class="vis ring">
+          <svg viewBox="0 0 84 84" aria-hidden="true"><circle class="bgc" cx="42" cy="42" r="36"/><circle class="fg" cx="42" cy="42" r="36"/></svg>
+          <div><b>38%</b><small>12 min left in chapter</small></div>
+        </div>
+      </div>
+      <div class="tile glass">
+        <span class="tic"><svg class="i"><use href="#i-moon"/></svg></span>
+        <h3>Easy on the eyes</h3>
+        <div class="vis themes"><span style="background:var(--rd-paper-bg);color:var(--rd-paper-fg)">Aa</span><span style="background:var(--rd-sepia-bg);color:var(--rd-sepia-fg)">Aa</span><span style="background:var(--rd-night-bg);color:var(--rd-night-fg)">Aa</span></div>
+      </div>
+      <div class="tile glass t-e">
+        <span class="tic"><svg class="i"><use href="#i-sync"/></svg></span>
+        <h3>Start on the laptop, finish on the phone</h3>
+        <p>Your place, highlights and cards follow your account across every device.</p>
+        <div class="vis devs"><div class="dv lap"><i></i></div><div class="dv tab"><i></i></div><div class="dv ph"><i></i></div><span class="syncl"><i></i>Synced just now</span></div>
+      </div>
+      <div class="tile glass t-f">
+        <span class="tic"><svg class="i"><use href="#i-file"/></svg></span>
+        <h3>EPUB and PDF, both done right</h3>
+        <p>Reflowing text for EPUB novels. Sharp zoom and pan for PDF textbooks and coaching notes.</p>
+        <div class="vis files"><div class="file" style="--c:var(--a1)">EPUB</div><div class="file" style="--c:var(--a3)">PDF</div><div class="drop">Drop a file here to start</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="hindi">
+    <div class="hindi">
+      <div>
+        <div class="shead" style="margin-bottom:0">
+          <span class="eyebrow"><span class="tick"></span>Hindi first</span>
+          <h2>Devanagari that looks like a real book</h2>
+          <p class="lead">Most reading apps treat Hindi as an afterthought: broken conjuncts, cramped matras, a dictionary that only speaks English. Pathak sets Indian scripts properly from day one.</p>
+        </div>
+        <div class="marquee" aria-label="Languages">
+          <div class="track">
+            <span class="lg glass"><span class="s deva">हिन्दी</span>Hindi<em class="on">Live</em></span>
+            <span class="lg glass"><span class="s">Aa</span>English<em class="on">Live</em></span>
+            <span class="lg glass"><span class="s deva">मराठी</span>Marathi<em>Next</em></span>
+            <span class="lg glass"><span class="s">বাংলা</span>Bengali<em>Next</em></span>
+            <span class="lg glass"><span class="s">தமிழ்</span>Tamil<em>Soon</em></span>
+            <span class="lg glass"><span class="s">తెలుగు</span>Telugu<em>Soon</em></span>
+            <span class="lg glass"><span class="s">ગુજરાતી</span>Gujarati<em>Soon</em></span>
+            <span class="lg glass" aria-hidden="true"><span class="s deva">हिन्दी</span>Hindi<em class="on">Live</em></span>
+            <span class="lg glass" aria-hidden="true"><span class="s">Aa</span>English<em class="on">Live</em></span>
+            <span class="lg glass" aria-hidden="true"><span class="s deva">मराठी</span>Marathi<em>Next</em></span>
+            <span class="lg glass" aria-hidden="true"><span class="s">বাংলা</span>Bengali<em>Next</em></span>
+            <span class="lg glass" aria-hidden="true"><span class="s">தமிழ்</span>Tamil<em>Soon</em></span>
+            <span class="lg glass" aria-hidden="true"><span class="s">తెలుగు</span>Telugu<em>Soon</em></span>
+            <span class="lg glass" aria-hidden="true"><span class="s">ગુજરાતી</span>Gujarati<em>Soon</em></span>
+          </div>
+        </div>
+      </div>
+      <div class="bookpage glass">
+        <div class="tog" role="group" aria-label="Book language">
+          <button type="button" data-l="hi" aria-pressed="true">हिन्दी</button>
+          <button type="button" data-l="en" aria-pressed="false">English</button>
+        </div>
+        <p class="bp-text hi" id="bpText"><mark>अनुच्छेद 21</mark> — किसी व्यक्ति को उसके प्राण या दैहिक स्वतंत्रता से विधि द्वारा स्थापित प्रक्रिया के अनुसार ही वंचित किया जाएगा, अन्यथा नहीं।</p>
+        <div class="bp-foot"><span id="bpSrc">भारत का संविधान · भाग 3</span><span>Same page, both scripts</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="exam">
+    <div class="shead">
+      <span class="eyebrow"><span class="tick"></span>Built for exam prep</span>
+      <h2>Your highlights become a <span class="grad-text">revision deck</span></h2>
+      <p class="lead">Made for UPSC, SSC, banking and state exam aspirants who read the same NCERTs and notes again and again. Mark it once, and Pathak decides when you see it next.</p>
+    </div>
+    <div class="exam">
+      <div>
+        <div class="steps">
+          <div class="step glass"><span class="n">1</span><div><h3>Highlight while you read</h3><p>Mark the fact the way you would with a pen. No switching apps.</p></div></div>
+          <div class="step glass"><span class="n">2</span><div><h3>Pathak writes the question</h3><p>Each highlight becomes a card that links back to its page. Edit it if you like.</p></div></div>
+          <div class="step glass"><span class="n">3</span><div><h3>Revise only what is due</h3><p>Cards you know come back later. Cards you miss come back sooner. Ten minutes a day keeps a subject fresh.</p></div></div>
+        </div>
+        <div class="step glass" style="display:block;margin-top:12px">
+          <div class="streak"><span>Reading streak</span><span><b>12 days</b> · last 21 weeks</span></div>
+          <div class="heat" id="heat" aria-label="Reading activity heatmap"></div>
+        </div>
+      </div>
+      <div class="deck glass" aria-label="Try a review session">
+        <div class="deckhead">
+          <b>Try a review</b>
+          <div class="due"><span>Due <b id="dLeft">4</b></span><span>Done <b id="dDone">0</b></span></div>
+        </div>
+        <div class="qcard" id="qcard">
+          <span class="qtag" id="qTag">Polity</span>
+          <p class="qq" id="qQ"></p>
+          <p class="qa" id="qA" hidden></p>
+          <span class="qsrc" id="qSrc"></span>
+        </div>
+        <button class="reveal" type="button" id="reveal">Show answer</button>
+        <div class="grade" id="grade" hidden>
+          <button type="button" class="again" data-g="again">Again<small>in 1 min</small></button>
+          <button type="button" class="good" data-g="good">Good<small>tomorrow</small></button>
+          <button type="button" class="easy" data-g="easy">Easy<small>in 4 days</small></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="library">
+    <div class="shead">
+      <span class="eyebrow"><span class="tick"></span>Where books come from</span>
+      <h2>Plenty to read. All of it legal.</h2>
+      <p class="lead">Pathak opens DRM-free files. Bring your own, or pick from free public libraries.</p>
+    </div>
+    <div class="srcs">
+      <div class="src glass"><span class="mono-l" style="--c:linear-gradient(135deg,var(--a2),var(--a3))"><svg class="i"><use href="#i-file"/></svg></span><div><h3>Your own files</h3><p>DRM-free ebooks, class notes, coaching material.</p><span class="tg">UPLOAD</span></div></div>
+      <div class="src glass"><span class="mono-l" style="--c:linear-gradient(135deg,#FF8A1F,#F25C05)">N</span><div><h3>NCERT textbooks</h3><p>The full school series from the government, in Hindi and English.</p><span class="tg">FREE</span></div></div>
+      <div class="src glass"><span class="mono-l" style="--c:linear-gradient(135deg,#1F9D8A,#0E7C86)">G</span><div><h3>Project Gutenberg</h3><p>Over 70,000 classics whose copyright has expired.</p><span class="tg">FREE</span></div></div>
+      <div class="src glass"><span class="mono-l" style="--c:linear-gradient(135deg,#3B82F6,#6366F1)">S</span><div><h3>Standard Ebooks</h3><p>Public-domain books, carefully proofread and typeset.</p><span class="tg">FREE</span></div></div>
+      <div class="src glass"><span class="mono-l" style="--c:linear-gradient(135deg,#8B5CF6,#C026D3)">O</span><div><h3>Open Library</h3><p>Borrow scanned books from the Internet Archive.</p><span class="tg">BORROW</span></div></div>
+      <div class="src glass"><span class="mono-l deva" style="--c:linear-gradient(135deg,#E11D48,#F97316);font-family:var(--f-deva)">प्रे</span><div><h3>Hindi classics</h3><p>Public-domain writers, from Bharatendu to Premchand.</p><span class="tg">FREE</span></div></div>
+    </div>
+    <div class="info glass"><svg class="i"><use href="#i-info"/></svg><p><b>Books bought on the Kindle store stay in the Kindle app.</b> Amazon locks them with DRM, so no other reader can open them legally. Pathak works with everything else.</p></div>
+  </section>
+
+  <section id="start" style="padding-bottom:0">
+    <div class="cta">
+      <div>
+        <h2>Open your first book in under a minute</h2>
+        <p>No device. No subscription. Pick a file and start reading, and your highlights will be waiting next time.</p>
+      </div>
+      <div class="ctas" style="margin-top:0">
+        <a class="btn primary" href="#top">Start reading free<svg class="i"><use href="#i-arrow"/></svg></a>
+        <a class="btn sec" href="#library">Browse free books</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <a class="brand" href="#top"><span class="logo">प</span>Pathak</a>
+    <span>Made in India · EPUB &amp; PDF reader · Preview</span>
+  </footer>
+</main>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var root=document.documentElement,mq=window.matchMedia('(prefers-color-scheme: dark)');
+  function applyMode(m){
+    root.setAttribute('data-theme',m);root.setAttribute('data-mode',m);
+    $('themeBtn').setAttribute('aria-label',m==='dark'?'Switch to light theme':'Switch to dark theme');
+  }
+  var saved=null;try{saved=localStorage.getItem('pathak-theme')}catch(e){}
+  var cur=root.getAttribute('data-theme');
+  applyMode(saved||(cur==='light'||cur==='dark'?cur:(mq.matches?'dark':'light')));
+  $('themeBtn').addEventListener('click',function(){
+    var next=root.getAttribute('data-mode')==='dark'?'light':'dark';
+    applyMode(next);try{localStorage.setItem('pathak-theme',next)}catch(e){}
+  });
+  var screen=$('screen');
+  document.querySelectorAll('.sw button').forEach(function(b){
+    b.addEventListener('click',function(){
+      screen.setAttribute('data-rt',b.dataset.t);
+      document.querySelectorAll('.sw button').forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});
+    });
+  });
+  var sheet=$('sheet');
+  function setSheet(open){sheet.classList.toggle('open',open)}
+  $('w').addEventListener('click',function(e){e.stopPropagation();setSheet(!sheet.classList.contains('open'))});
+  $('closeSheet').addEventListener('click',function(){setSheet(false)});
+  screen.addEventListener('click',function(e){if(sheet.classList.contains('open')&&!sheet.contains(e.target)&&e.target.id!=='w')setSheet(false)});
+
+  var due=64,tt;
+  function toast(msg){
+    $('toastTxt').textContent=msg;var t=$('toast');t.classList.add('show');
+    clearTimeout(tt);tt=setTimeout(function(){t.classList.remove('show')},1900);
+    due++;$('dueTxt').textContent=due+' cards';$('dueSub').textContent='1 just added';
+    var c=$('dueChip');c.classList.remove('bump');void c.offsetWidth;c.classList.add('bump');
+  }
+  $('mk').addEventListener('click',function(){toast('Added to Polity deck')});
+  $('addWord').addEventListener('click',function(){setSheet(false);toast('“liberty” added to Words')});
+
+  var texts={
+    hi:{t:'<mark>अनुच्छेद 21</mark> — किसी व्यक्ति को उसके प्राण या दैहिक स्वतंत्रता से विधि द्वारा स्थापित प्रक्रिया के अनुसार ही वंचित किया जाएगा, अन्यथा नहीं।',s:'भारत का संविधान · भाग 3'},
+    en:{t:'<mark>Article 21</mark> — No person shall be deprived of his life or personal liberty except according to procedure established by law.',s:'Constitution of India · Part III'}
+  };
+  document.querySelectorAll('.tog button').forEach(function(b){
+    b.addEventListener('click',function(){
+      var l=b.dataset.l,p=$('bpText');p.innerHTML=texts[l].t;p.className='bp-text '+l;$('bpSrc').textContent=texts[l].s;
+      document.querySelectorAll('.tog button').forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});
+    });
+  });
+
+  var heat=$('heat'),seed=7;
+  function rnd(){seed=(seed*9301+49297)%233280;return seed/233280}
+  for(var i=0;i<147;i++){var c=document.createElement('i');var r=rnd();var l=i>134?3:(r>.82?3:r>.6?2:r>.38?1:0);c.setAttribute('data-l',l);heat.appendChild(c)}
+
+  var cards=[
+    {tag:'Polity',q:'Which amendment added “socialist”, “secular” and “integrity” to the Preamble?',a:'The 42nd Amendment, 1976.',s:'From your highlight · Indian Polity, p. 34'},
+    {tag:'Polity',q:'Which article protects the right to life and personal liberty?',a:'Article 21.',s:'From your highlight · Indian Polity, p. 98'},
+    {tag:'History',q:'In which year was the Battle of Plassey fought?',a:'1757.',s:'From your highlight · Modern India, p. 18'},
+    {tag:'Polity',q:'Who chaired the Drafting Committee of the Constituent Assembly?',a:'Dr B. R. Ambedkar.',s:'From your highlight · Indian Polity, p. 12'}
+  ];
+  var idx=0,done=0,queue=cards.slice();
+  function show(){
+    var c=queue[idx%queue.length];
+    $('qTag').textContent=c.tag;$('qQ').textContent=c.q;$('qA').textContent=c.a;$('qSrc').textContent=c.s;
+    $('qA').hidden=true;$('reveal').hidden=false;$('grade').hidden=true;
+  }
+  $('reveal').addEventListener('click',function(){$('qA').hidden=false;$('reveal').hidden=true;$('grade').hidden=false});
+  $('grade').addEventListener('click',function(e){
+    var b=e.target.closest('button');if(!b)return;
+    var qc=$('qcard');qc.classList.add('out');
+    setTimeout(function(){
+      if(b.dataset.g!=='again'){done++;}
+      var left=Math.max(4-done,0);
+      $('dDone').textContent=done;$('dLeft').textContent=left;
+      idx++;
+      if(left===0){done=0;setTimeout(function(){$('dLeft').textContent=4;$('dDone').textContent=0},1200)}
+      show();qc.classList.remove('out');
+    },300);
+  });
+  show();
+})();
+</script>
+
+</body>
+</html>
