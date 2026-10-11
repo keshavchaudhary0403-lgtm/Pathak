@@ -337,7 +337,7 @@ function bookCardHTML(b) {
   return `<div class="bk" data-id="${b.id}">
     <button class="open" type="button" data-open="${b.id}" aria-label="Read ${esc(b.title)}">${coverHTML(b, extra)}</button>
     <button class="more" type="button" data-more="${b.id}" aria-label="More options for ${esc(b.title)}">${icon('dots')}</button>
-    <div><div class="t">${esc(b.title)}</div><div class="a">${esc(b.author || '')}</div></div>
+    <div><button class="t clk" type="button" data-open="${b.id}">${esc(b.title)}</button>${b.author ? `<button class="a clk" type="button" data-author="${esc(b.author)}" title="More by ${esc(b.author)}">${esc(b.author)}</button>` : '<div class="a">&nbsp;</div>'}</div>
     <div class="pm"><span class="pbar"><i style="width:${pct(b.progress)}"></i></span>${b.progress >= 0.995 ? 'Done' : pct(b.progress)}</div>
   </div>`;
 }
@@ -358,8 +358,8 @@ function renderLibrary() {
         </div>
       </button>` : ''}
       <div class="stats" style="${recent ? '' : 'grid-column:1/-1'}">
-        <div class="stat glass"><span class="ic" style="background:linear-gradient(135deg,var(--a1),var(--a2))">${icon('flame')}</span><b>${st}</b><span>day streak</span></div>
-        <div class="stat glass"><span class="ic" style="background:linear-gradient(135deg,var(--ok),#0EA5E9)">${icon('clock')}</span><b>${minutesToday()}</b><span>min today</span></div>
+        <button class="stat glass clk" type="button" ${recent ? `data-open="${recent.id}" title="Keep your streak going"` : 'data-add'}><span class="ic" style="background:linear-gradient(135deg,var(--a1),var(--a2))">${icon('flame')}</span><b>${st}</b><span>day streak</span></button>
+        <button class="stat glass clk" type="button" ${recent ? `data-open="${recent.id}" title="Continue reading"` : 'data-add'}><span class="ic" style="background:linear-gradient(135deg,var(--ok),#0EA5E9)">${icon('clock')}</span><b>${minutesToday()}</b><span>min today</span></button>
         <a class="stat glass" href="#/cards"><span class="ic" style="background:linear-gradient(135deg,var(--a3),var(--a2))">${icon('cards')}</span><b>${S.cards.length}</b><span>cards saved</span></a>
         <div class="heatcard glass"><div class="row"><span>Reading activity</span><span>${minutesThisWeek()} min this week</span></div>${heatmapHTML()}</div>
       </div>
@@ -408,6 +408,8 @@ function renderLibrary() {
 }
 
 $('#view').addEventListener('click', (e) => {
+  const au = e.target.closest('[data-author]');
+  if (au) { S.libQuery = au.dataset.author; renderLibrary(); $('#libSearch')?.focus(); window.scrollTo({ top: $('#libSearch')?.getBoundingClientRect().top + scrollY - 120, behavior: 'smooth' }); return; }
   const open = e.target.closest('[data-open]');
   if (open) { go(`#/read/${open.dataset.open}`); return; }
   const more = e.target.closest('[data-more]');
@@ -463,7 +465,7 @@ function hlCardHTML(h, showBook = false) {
   const b = bookById(h.bookId);
   const hasCard = S.cards.some((c) => c.highlightId === h.id);
   return `<div class="hlc glass" style="--c:${HL_COLORS[h.color]?.fill}" data-h="${h.id}">
-    <q>${esc(h.text)}</q>
+    <q class="clk" data-act="open" title="Open in book">${esc(h.text)}</q>
     ${h.note ? `<div class="note">${esc(h.note)}</div>` : ''}
     <div class="foot"><span>${showBook && b ? esc(b.title) + ' · ' : ''}${esc(h.chapter || '')}${h.chapter ? ' · ' : ''}${relTime(h.createdAt)}</span>
       <span class="acts">
@@ -501,7 +503,7 @@ function renderNotebook() {
           const b = bookById(bid);
           if (!b) return '';
           const cu = coverURL(b);
-          return `<div class="nb-group"><h3>${cu ? `<img src="${cu}" alt="">` : `<span class="mini" style="background:${gradFor(b.title)}"></span>`}<span>${esc(b.title)} <small>${plural(hs.length, 'highlight')}</small></span></h3>
+          return `<div class="nb-group"><h3><button class="nb-book clk" type="button" data-open="${b.id}" title="Open ${esc(b.title)}">${cu ? `<img src="${cu}" alt="">` : `<span class="mini" style="background:${gradFor(b.title)}"></span>`}<span>${esc(b.title)} <small>${plural(hs.length, 'highlight')}</small></span></button></h3>
             <div class="nb-list">${hs.map((h) => hlCardHTML(h)).join('')}</div></div>`;
         }).join('')}
     </div>`;
@@ -1053,9 +1055,9 @@ function cardHTML(c) {
     </article>`;
   }
   return `<article class="qc glass" data-card="${c.id}" style="--c:${HL_COLORS[c.color]?.fill || 'var(--a1)'}">
-    <blockquote class="${deva ? 'deva-q' : ''}">${esc(tidyQuote(c.text))}</blockquote>
+    <blockquote class="${deva ? 'deva-q' : ''}${b ? ' clk' : ''}" ${b ? 'data-cact="open" title="Open in book"' : ''}>${esc(tidyQuote(c.text))}</blockquote>
     ${c.note ? `<div class="note">${esc(c.note)}</div>` : ''}
-    <div class="foot"><span>${src}</span><span class="acts">${acts}</span></div>
+    <div class="foot">${b ? `<button class="src-l clk" type="button" data-cact="open">${src}</button>` : `<span>${src}</span>`}<span class="acts">${acts}</span></div>
   </article>`;
 }
 function renderCards() {
