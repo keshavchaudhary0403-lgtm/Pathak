@@ -2,6 +2,7 @@ import './app.css';
 import { db, uid, today } from './db.js';
 import { DEFAULT_SETTINGS, THEMES, FONTS, HL_COLORS } from './config.js';
 import { lookup } from './dict.js';
+import { cleanTitle, cleanAuthor } from './meta.js';
 
 /* ---------- helpers ---------- */
 const books = () => import('./books.js');
@@ -71,6 +72,12 @@ const S = {
 async function loadAll() {
   [S.books, S.highlights, S.cards, S.stats] = await Promise.all([db.all('books'), db.all('highlights'), db.all('cards'), db.all('stats')]);
   S.settings = { ...DEFAULT_SETTINGS, ...(await db.getKV('settings', {})) };
+  for (const b of S.books) {
+    if (b.edited) continue;
+    const t = cleanTitle(b.title, b.fileName);
+    const a = cleanAuthor(b.author);
+    if (t !== b.title || a !== (b.author || '')) { b.title = t; b.author = a; await db.put('books', b); }
+  }
   for (const c of S.cards) {
     if (c.text == null) {
       c.kind = 'quote';
@@ -409,6 +416,7 @@ $('#view').addEventListener('click', (e) => {
     openMenu(more, [
       { icon: 'book', label: b.progress > 0 ? 'Continue reading' : 'Start reading', run: () => go(`#/read/${b.id}`) },
       { icon: 'notes', label: 'Highlights', run: () => { S.nb.book = b.id; go('#/notebook'); } },
+      { icon: 'edit', label: 'Edit title and author', run: () => editBookDialog(b) },
       { icon: 'check', label: b.progress >= 0.995 ? 'Mark as unread' : 'Mark as finished', run: async () => { b.progress = b.progress >= 0.995 ? 0 : 1; if (!b.progress) b.position = null; await db.put('books', b); renderLibrary(); } },
       { icon: 'trash', label: 'Remove from library', danger: true, confirm: 'Tap again to remove', run: async () => {
         await (await books()).removeBook(b.id);
@@ -420,6 +428,28 @@ $('#view').addEventListener('click', (e) => {
     ]);
   }
 });
+
+function editBookDialog(b) {
+  const sh = openSheet(`
+    <h2>Book details</h2>
+    <div class="field"><label for="bkTitle">Title</label><input class="input" id="bkTitle" value="${esc(b.title)}" style="height:46px;border-radius:14px"></div>
+    <div class="field"><label for="bkAuthor">Author</label><input class="input" id="bkAuthor" value="${esc(b.author || '')}" placeholder="Unknown" style="height:46px;border-radius:14px"></div>
+    <div class="foot"><button class="btn soft" type="button" data-x="cancel">Cancel</button><button class="btn primary" type="button" data-x="save">Save</button></div>`, { dialog: true });
+  sh.addEventListener('click', async (e) => {
+    const x = e.target.closest('[data-x]')?.dataset.x;
+    if (!x) return;
+    if (x === 'save') {
+      b.title = $('#bkTitle', sh).value.trim() || b.title;
+      b.author = $('#bkAuthor', sh).value.trim();
+      b.edited = true;
+      await db.put('books', b);
+      toast('Book details saved');
+      refreshCurrent();
+    }
+    closeOverlay();
+  });
+  sh.addEventListener('keydown', (e) => { if (e.key === 'Enter') sh.querySelector('[data-x="save"]').click(); });
+}
 
 /* ---------- notebook ---------- */
 function filteredHighlights() {
@@ -986,6 +1016,15 @@ async function copyText(t) {
 document.addEventListener('pointerdown', (e) => { if (pop && !pop.el.contains(e.target) && !e.target.closest?.('.r-host')) closePop(); }, true);
 
 /* ---------- cards ---------- */
+// Drop quote marks left dangling by a selection (an opening quote with no closing one, or the reverse).
+function tidyQuote(t) {
+  let text = (t || '').trim();
+  const opens = (text.match(/[“‘]/g) || []).length;
+  const closes = (text.match(/[”’]/g) || []).length;
+  if (/^[“‘"]/.test(text) && opens >= closes) text = text.slice(1).trim();
+  if (/[”’"]$/.test(text) && closes > opens) text = text.slice(0, -1).trim();
+  return text;
+}
 function filteredCards() {
   const q = S.cardsView.q.trim().toLowerCase();
   return S.cards
@@ -1014,7 +1053,7 @@ function cardHTML(c) {
     </article>`;
   }
   return `<article class="qc glass" data-card="${c.id}" style="--c:${HL_COLORS[c.color]?.fill || 'var(--a1)'}">
-    <blockquote class="${deva ? 'deva-q' : ''}">${esc(c.text)}</blockquote>
+    <blockquote class="${deva ? 'deva-q' : ''}">${esc(tidyQuote(c.text))}</blockquote>
     ${c.note ? `<div class="note">${esc(c.note)}</div>` : ''}
     <div class="foot"><span>${src}</span><span class="acts">${acts}</span></div>
   </article>`;
@@ -1089,8 +1128,9 @@ async function shareImage(c) {
   const cw = W - pad * 2;
   x.fillStyle = 'rgba(255,255,255,0.96)';
   x.beginPath(); x.roundRect(pad, pad, cw, H - pad * 2, 48); x.fill();
-  const text = c.kind === 'word' ? c.text : c.text;
-  let size = 58;
+  // Drop quote marks left dangling by the selection (e.g. an opening quote with no closing one).
+  const text = tidyQuote(c.text);
+  let size = text.length < 60 ? 76 : text.length < 140 ? 64 : text.length < 300 ? 54 : 46;
   let lines;
   const wrap = (t, s) => {
     x.font = `500 ${s}px ${serif}`;
@@ -1099,44 +1139,69 @@ async function shareImage(c) {
       let line = '';
       for (const w of para.split(/\s+/)) {
         const test = line ? `${line} ${w}` : w;
-        if (x.measureText(test).width > cw - 140 && line) { out.push(line); line = w; } else line = test;
+        if (x.measureText(test).width > cw - 150 && line) { out.push(line); line = w; } else line = test;
       }
       if (line) out.push(line);
     }
     return out;
   };
-  const maxH = H - pad * 2 - 360;
-  do { lines = wrap(text, size); size -= 2; } while (lines.length * size * 1.45 > maxH && size > 26);
+  const top = pad + 200;
+  const bottom = H - pad - 190;
+  const maxH = bottom - top;
+  do { lines = wrap(text, size); size -= 2; } while (lines.length * size * 1.45 > maxH && size > 24);
   size += 2;
+  if (lines.length * size * 1.45 > maxH) {
+    const keep = Math.floor(maxH / (size * 1.45));
+    lines = lines.slice(0, keep);
+    lines[keep - 1] = lines[keep - 1].replace(/\s+\S*$/, '') + '…';
+  }
   const lh = size * 1.45;
-  let y = pad + 150 + (maxH - lines.length * lh) / 2;
+  let y = top + (maxH - lines.length * lh) / 2;
   x.fillStyle = '#FF3D7F';
-  x.font = `700 140px ${serif}`;
-  x.fillText('“', pad + 60, pad + 170);
+  x.font = `700 150px "Literata", Georgia, serif`;
+  x.fillText('“', pad + 66, pad + 185);
   x.fillStyle = '#1A1626';
   x.font = `500 ${size}px ${serif}`;
-  for (const l of lines) { x.fillText(l, pad + 70, y + size); y += lh; }
+  for (const l of lines) { x.fillText(l, pad + 75, y + size); y += lh; }
   if (c.kind === 'word' && (c.translation || c.meaning)) {
-    x.font = '500 34px "Hanken Grotesk", sans-serif';
-    x.fillStyle = '#676179';
-    x.fillText([c.translation, c.pos].filter(Boolean).join(' · ').slice(0, 60), pad + 70, y + 40);
+    x.font = '600 38px "Mukta", "Hanken Grotesk", sans-serif';
+    x.fillStyle = '#5B3FD6';
+    x.fillText([c.translation, c.pos].filter(Boolean).join(' · ').slice(0, 50), pad + 75, y + 46);
   }
+  // Footer: divider, book title, chapter and author, Pathak mark on the right.
+  const fit = (str, max) => {
+    if (!str) return '';
+    let t = str;
+    while (t && x.measureText(t).width > max) t = t.slice(0, -1);
+    return t === str ? t : `${t.trimEnd()}…`;
+  };
   const b = bookById(c.bookId);
-  x.fillStyle = '#676179';
-  x.font = '600 30px "Hanken Grotesk", sans-serif';
-  const src = [b?.title, b?.author].filter(Boolean).join(' · ');
-  let srcT = src;
-  while (srcT && x.measureText(srcT).width > cw - 140) srcT = srcT.slice(0, -2);
-  if (srcT !== src) srcT += '…';
-  x.fillText(srcT, pad + 70, H - pad - 110);
-  const lg = x.createLinearGradient(pad + 70, 0, pad + 130, 0);
-  lg.addColorStop(0, '#FF8A1F'); lg.addColorStop(1, '#7B5CFF');
+  const fy = H - pad - 150;
+  x.fillStyle = 'rgba(26,22,38,0.08)';
+  x.fillRect(pad + 75, fy, cw - 150, 2);
+  const textMax = cw - 150 - 190;
+  const title = b?.title || '';
+  const sub = [c.chapter && !/^page \d+$/i.test(c.chapter) && c.chapter !== title ? c.chapter : '', b?.author].filter(Boolean).join(' · ');
+  if (title) {
+    x.fillStyle = '#1A1626';
+    x.font = '700 34px "Hanken Grotesk", sans-serif';
+    x.fillText(fit(title, textMax), pad + 75, fy + (sub ? 62 : 84));
+  }
+  if (sub) {
+    x.fillStyle = '#676179';
+    x.font = '500 28px "Hanken Grotesk", sans-serif';
+    x.fillText(fit(sub, textMax), pad + 75, fy + 104);
+  }
+  const lx = W - pad - 75 - 170;
+  const ly = fy + 50;
+  const lg = x.createLinearGradient(lx, ly, lx + 44, ly + 44);
+  lg.addColorStop(0, '#FF8A1F'); lg.addColorStop(0.5, '#FF3D7F'); lg.addColorStop(1, '#7B5CFF');
   x.fillStyle = lg;
-  x.beginPath(); x.roundRect(pad + 70, H - pad - 80, 44, 44, 12); x.fill();
+  x.beginPath(); x.roundRect(lx, ly, 44, 44, 12); x.fill();
   x.fillStyle = '#fff'; x.font = '700 28px "Mukta", sans-serif'; x.textAlign = 'center';
-  x.fillText('प', pad + 92, H - pad - 49);
-  x.textAlign = 'left'; x.fillStyle = '#1A1626'; x.font = '700 28px "Hanken Grotesk", sans-serif';
-  x.fillText('Pathak', pad + 128, H - pad - 49);
+  x.fillText('प', lx + 22, ly + 32);
+  x.textAlign = 'left'; x.fillStyle = '#1A1626'; x.font = '700 30px "Hanken Grotesk", sans-serif';
+  x.fillText('Pathak', lx + 56, ly + 32);
   cv.toBlob((blob) => { if (blob) { download(blob, `pathak-card-${today()}.png`); toast('Image saved'); } }, 'image/png');
 }
 

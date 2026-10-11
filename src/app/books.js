@@ -2,6 +2,7 @@
 import ePub from 'epubjs';
 import { db, uid } from './db.js';
 import { pdfjs } from './pdfjs.js';
+import { cleanTitle, cleanAuthor } from './meta.js';
 
 export function detectType(file) {
   const n = (file.name || '').toLowerCase();
@@ -23,8 +24,8 @@ async function epubMeta(buf, file) {
   } catch { /* no cover */ }
   book.destroy();
   return {
-    title: (md.title || baseName(file.name)).trim(),
-    author: (md.creator || '').trim(),
+    title: cleanTitle(md.title, file.name),
+    author: cleanAuthor(md.creator),
     lang: md.language || '',
     cover,
   };
@@ -51,8 +52,7 @@ async function pdfMeta(buf, file) {
   } catch { /* ignore */ }
   const pages = doc.numPages;
   doc.destroy();
-  if (!title || /^(untitled|microsoft word|document)/i.test(title)) title = baseName(file.name);
-  return { title: title.trim(), author: author.trim(), lang: '', cover, pages };
+  return { title: cleanTitle(title, file.name), author: cleanAuthor(author), lang: '', cover, pages };
 }
 
 export async function importFile(file) {

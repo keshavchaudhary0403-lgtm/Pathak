@@ -11,18 +11,21 @@
   --f-read:"Literata","Tiro Devanagari Hindi",Georgia,serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
   --top:env(safe-area-inset-top,0px); --bot:env(safe-area-inset-bottom,0px);
+  --chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23676179' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0C0A12; --surface:#17131F; --glass:rgba(27,22,38,.7); --glass-line:rgba(255,255,255,.07);
   --ink:#F4F1FA; --muted:#A49EB5; --faint:#6E6880; --line:rgba(255,255,255,.08); --soft:#1D1828; --soft2:#262036;
   --a1:#FF9A3D; --a2:#FF5C93; --a3:#9B85FF; --ok:#3DD6A3; --danger:#FF6B6B;
-  --shadow:0 30px 80px -36px rgba(0,0,0,.85); --shadow-s:0 10px 30px -18px rgba(0,0,0,.75); --blob-o:.22; color-scheme:dark}}
+  --shadow:0 30px 80px -36px rgba(0,0,0,.85); --shadow-s:0 10px 30px -18px rgba(0,0,0,.75); --blob-o:.22; color-scheme:dark;
+  --chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A49EB5' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");}}
 :root[data-theme="dark"]{
   --bg:#0C0A12; --surface:#17131F; --glass:rgba(27,22,38,.7); --glass-line:rgba(255,255,255,.07);
   --ink:#F4F1FA; --muted:#A49EB5; --faint:#6E6880; --line:rgba(255,255,255,.08); --soft:#1D1828; --soft2:#262036;
   --a1:#FF9A3D; --a2:#FF5C93; --a3:#9B85FF; --ok:#3DD6A3; --danger:#FF6B6B;
-  --shadow:0 30px 80px -36px rgba(0,0,0,.85); --shadow-s:0 10px 30px -18px rgba(0,0,0,.75); --blob-o:.22; color-scheme:dark}
+  --shadow:0 30px 80px -36px rgba(0,0,0,.85); --shadow-s:0 10px 30px -18px rgba(0,0,0,.75); --blob-o:.22; color-scheme:dark;
+  --chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A49EB5' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");}
 
 *{box-sizing:border-box}
 html,body{height:100%}
@@ -112,11 +115,15 @@ main.view{max-width:1240px;margin:0 auto;padding:18px 16px 60px}
 .heatcard .row{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
 
 .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.input,.select{height:40px;border-radius:12px;border:1px solid var(--line);background:var(--surface);padding:0 12px;font-size:14.5px;min-width:0}
-.input:focus,.select:focus{outline:2px solid color-mix(in srgb,var(--a3) 60%,transparent);outline-offset:0}
+.input{height:42px;border-radius:999px;border:1px solid var(--line);background:var(--surface);padding:0 16px;font-size:14.5px;min-width:0;box-shadow:var(--shadow-s)}
+.select{-webkit-appearance:none;appearance:none;height:42px;border-radius:999px;border:1px solid var(--line);background:var(--surface) var(--chev) no-repeat right 14px center/16px 16px;padding:0 42px 0 18px;font-size:14px;font-weight:600;color:var(--ink);min-width:0;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;box-shadow:var(--shadow-s);transition:border-color .15s,background-color .15s}
+.select:hover{border-color:color-mix(in srgb,var(--a3) 45%,transparent)}
+.select::-ms-expand{display:none}
+.select option{font-weight:500;background:var(--surface);color:var(--ink)}
+.input:focus,.select:focus{outline:none;border-color:var(--a3);box-shadow:0 0 0 3px color-mix(in srgb,var(--a3) 22%,transparent)}
 .search{position:relative;flex:1;min-width:180px;max-width:360px}
-.search svg{position:absolute;left:11px;top:10px;width:18px;height:18px;color:var(--faint)}
-.search .input{width:100%;padding-left:36px}
+.search svg{position:absolute;left:15px;top:12px;width:18px;height:18px;color:var(--faint)}
+.search .input{width:100%;padding-left:40px}
 
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:22px 18px}
 @media (max-width:480px){.grid{grid-template-columns:repeat(2,1fr);gap:18px 14px}}
