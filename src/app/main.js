@@ -1,7 +1,6 @@
 import './app.css';
 import { db, uid, today } from './db.js';
 import { DEFAULT_SETTINGS, THEMES, FONTS, HL_COLORS } from './config.js';
-import { newCard, schedule, previewLabel, suggestCloze } from './srs.js';
 import { lookup } from './dict.js';
 
 /* ---------- helpers ---------- */
@@ -66,12 +65,19 @@ const S = {
   libSort: 'recent',
   libQuery: '',
   nb: { q: '', book: 'all', color: 'all' },
-  deck: 'all',
+  cardsView: { q: '', book: 'all' },
 };
 
 async function loadAll() {
   [S.books, S.highlights, S.cards, S.stats] = await Promise.all([db.all('books'), db.all('highlights'), db.all('cards'), db.all('stats')]);
   S.settings = { ...DEFAULT_SETTINGS, ...(await db.getKV('settings', {})) };
+  for (const c of S.cards) {
+    if (c.text == null) {
+      c.kind = 'quote';
+      c.text = c.context || [c.front, c.back].filter(Boolean).join(' ');
+      await db.put('cards', c);
+    }
+  }
 }
 const bookById = (id) => S.books.find((b) => b.id === id);
 function coverURL(b) {
@@ -144,11 +150,7 @@ function minutesThisWeek() {
   return Math.floor(S.stats.filter((s) => s.date >= from).reduce((a, s) => a + s.seconds, 0) / 60);
 }
 const minutesToday = () => Math.floor((statFor(today())?.seconds || 0) / 60);
-const dueCards = (deck = 'all') => S.cards.filter((c) => c.due <= Date.now() && (deck === 'all' || c.bookId === deck)).sort((a, b) => a.due - b.due);
-function updateBadges() {
-  const n = dueCards().length;
-  $$('[data-due]').forEach((b) => { b.hidden = !n; b.textContent = n > 99 ? '99+' : n; });
-}
+function updateBadges() {}
 
 /* ---------- overlays ---------- */
 let overlay = null;
@@ -265,7 +267,7 @@ function currentRoute() {
   const params = new URLSearchParams(query || '');
   if (parts[0] === 'read' && parts[1]) return { name: 'read', id: parts[1], params };
   if (parts[0] === 'notebook') return { name: 'notebook', params };
-  if (parts[0] === 'review') return { name: 'review', params };
+  if (parts[0] === 'cards' || parts[0] === 'review') return { name: 'cards', params };
   return { name: 'library', params };
 }
 function go(hash) { if (location.hash === hash) route(); else location.hash = hash; }
@@ -276,7 +278,7 @@ async function route() {
   closePop();
   const r = currentRoute();
   if (r.name === 'read') {
-    await openReader(r.id, r.params.get('h'));
+    await openReader(r.id, r.params.get('h') || (r.params.get('c') ? `card:${r.params.get('c')}` : null));
     return;
   }
   if (R.active) await closeReader(false);
@@ -285,7 +287,7 @@ async function route() {
   if (r.name === 'notebook') {
     if (r.params.get('book')) S.nb.book = r.params.get('book');
     renderNotebook();
-  } else if (r.name === 'review') renderReview();
+  } else if (r.name === 'cards') renderCards();
   else renderLibrary();
   updateBadges();
   window.scrollTo(0, 0);
@@ -336,7 +338,6 @@ function bookCardHTML(b) {
 function renderLibrary() {
   const v = $('#view');
   const recent = [...S.books].filter((b) => b.lastOpened).sort((a, b) => b.lastOpened - a.lastOpened)[0];
-  const due = dueCards().length;
   const st = streak();
   const top = `
     <div class="lib-top">
@@ -352,7 +353,7 @@ function renderLibrary() {
       <div class="stats" style="${recent ? '' : 'grid-column:1/-1'}">
         <div class="stat glass"><span class="ic" style="background:linear-gradient(135deg,var(--a1),var(--a2))">${icon('flame')}</span><b>${st}</b><span>day streak</span></div>
         <div class="stat glass"><span class="ic" style="background:linear-gradient(135deg,var(--ok),#0EA5E9)">${icon('clock')}</span><b>${minutesToday()}</b><span>min today</span></div>
-        <a class="stat glass" href="#/review"><span class="ic" style="background:linear-gradient(135deg,var(--a3),var(--a2))">${icon('cards')}</span><b>${due}</b><span>cards due</span></a>
+        <a class="stat glass" href="#/cards"><span class="ic" style="background:linear-gradient(135deg,var(--a3),var(--a2))">${icon('cards')}</span><b>${S.cards.length}</b><span>cards saved</span></a>
         <div class="heatcard glass"><div class="row"><span>Reading activity</span><span>${minutesThisWeek()} min this week</span></div>${heatmapHTML()}</div>
       </div>
     </div>`;
@@ -438,7 +439,7 @@ function hlCardHTML(h, showBook = false) {
       <span class="acts">
         <button class="ib" type="button" data-act="open" aria-label="Open in book" title="Open in book">${icon('open')}</button>
         <button class="ib" type="button" data-act="note" aria-label="Edit note" title="Note">${icon('note')}</button>
-        <button class="ib" type="button" data-act="card" aria-label="Make card" title="${hasCard ? 'Card made' : 'Make card'}" style="${hasCard ? 'color:var(--a3)' : ''}">${icon('cards')}</button>
+        <button class="ib" type="button" data-act="card" aria-label="${hasCard ? 'Remove from Cards' : 'Save to Cards'}" title="${hasCard ? 'In Cards' : 'Save to Cards'}" style="${hasCard ? 'color:var(--a3)' : ''}">${icon('cards')}</button>
         <button class="ib" type="button" data-act="del" aria-label="Delete highlight" title="Delete">${icon('trash')}</button>
       </span></div>
   </div>`;
@@ -493,8 +494,8 @@ $('#view').addEventListener('click', async (e) => {
   if (!h) return;
   const act = btn.dataset.act;
   if (act === 'open') go(`#/read/${h.bookId}?h=${h.id}`);
-  if (act === 'note') noteDialog(h, () => renderNotebook());
-  if (act === 'card') cardDialog({ bookId: h.bookId, highlightId: h.id, text: h.text, color: h.color }, () => renderNotebook());
+  if (act === 'note') noteDialog(h, saveHighlight, () => renderNotebook());
+  if (act === 'card') { await toggleCardFor(h); renderNotebook(); }
   if (act === 'del') { await deleteHighlight(h); renderNotebook(); }
 });
 
@@ -529,18 +530,18 @@ async function deleteHighlight(h, quiet = false) {
   if (!quiet) toast('Highlight deleted', { label: 'Undo', run: async () => { await saveHighlight(h); if (currentRoute().name === 'notebook') renderNotebook(); } });
 }
 
-function noteDialog(h, after) {
+function noteDialog(h, saver = saveHighlight, after) {
   const sh = openSheet(`
     <h2>Note</h2>
-    <div class="quote" style="--c:${HL_COLORS[h.color]?.fill}">${esc(h.text)}</div>
-    <div class="field"><label for="noteText">Your note</label><textarea id="noteText" placeholder="What do you think about this?">${esc(h.note || '')}</textarea></div>
+    <div class="quote" style="--c:${HL_COLORS[h.color]?.fill || 'var(--a1)'}">${esc(h.text)}</div>
+    <div class="field"><label for="noteText">Your note</label><textarea id="noteText" placeholder="Why does this matter to you?">${esc(h.note || '')}</textarea></div>
     <div class="foot">${h.note ? '<button class="btn ghost" type="button" data-x="clear">Remove note</button>' : ''}<button class="btn soft" type="button" data-x="cancel">Cancel</button><button class="btn primary" type="button" data-x="save">Save</button></div>`, { dialog: true });
   sh.addEventListener('click', async (e) => {
     const x = e.target.closest('[data-x]')?.dataset.x;
     if (!x) return;
     if (x === 'cancel') return closeOverlay();
     h.note = x === 'clear' ? '' : $('#noteText', sh).value.trim();
-    await saveHighlight(h);
+    await saver(h);
     closeOverlay();
     toast(h.note ? 'Note saved' : 'Note removed');
     after?.();
@@ -548,31 +549,39 @@ function noteDialog(h, after) {
   sh.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) sh.querySelector('[data-x="save"]').click(); });
 }
 
-function cardDialog({ bookId, highlightId = null, text = '', front, back, color, existing }, after) {
-  const sug = front != null ? { front, back } : suggestCloze(text);
-  const card = existing;
-  const sh = openSheet(`
-    <h2>${card ? 'Edit card' : 'New card'}</h2>
-    ${text && !card ? `<div class="quote" style="--c:${HL_COLORS[color]?.fill || 'var(--a1)'}">${esc(text)}</div>` : ''}
-    <div class="field"><label for="cFront">Question</label><textarea id="cFront" style="min-height:80px">${esc(card ? card.front : sug.front)}</textarea></div>
-    <div class="field"><label for="cBack">Answer</label><textarea id="cBack" style="min-height:64px">${esc(card ? card.back : sug.back)}</textarea></div>
-    <div class="foot"><button class="btn soft" type="button" data-x="cancel">Cancel</button><button class="btn primary" type="button" data-x="save">${card ? 'Save' : 'Add card'}</button></div>`, { dialog: true });
-  sh.addEventListener('click', async (e) => {
-    const x = e.target.closest('[data-x]')?.dataset.x;
-    if (!x) return;
-    if (x === 'cancel') return closeOverlay();
-    const f = $('#cFront', sh).value.trim();
-    const b = $('#cBack', sh).value.trim();
-    if (!f) { $('#cFront', sh).focus(); return; }
-    const c = card ? { ...card, front: f, back: b } : newCard({ id: uid(), bookId, highlightId, front: f, back: b, context: text });
-    await db.put('cards', c);
-    const i = S.cards.findIndex((y) => y.id === c.id);
-    if (i >= 0) S.cards[i] = c; else S.cards.push(c);
-    closeOverlay();
-    updateBadges();
-    toast(card ? 'Card updated' : 'Card added to Review');
-    after?.();
-  });
+async function putCard(c) {
+  await db.put('cards', c);
+  const i = S.cards.findIndex((y) => y.id === c.id);
+  if (i >= 0) S.cards[i] = c; else S.cards.push(c);
+}
+async function deleteCard(c, quiet = false) {
+  await db.del('cards', c.id);
+  S.cards = S.cards.filter((x) => x.id !== c.id);
+  if (!quiet) toast('Removed from Cards', { label: 'Undo', run: async () => { await putCard(c); refreshCurrent(); } });
+}
+function refreshCurrent() {
+  const n = currentRoute().name;
+  if (n === 'cards') renderCards();
+  else if (n === 'notebook') renderNotebook();
+  else if (n === 'library') renderLibrary();
+}
+// Save a highlight's passage as a card. Keeps its own copy so the card survives if the highlight is removed.
+async function cardFromHighlight(h) {
+  const existing = S.cards.find((c) => c.highlightId === h.id);
+  if (existing) return { card: existing, created: false };
+  const { id, ...anchor } = h;
+  const card = {
+    ...anchor, id: uid(), kind: 'quote', highlightId: h.id,
+    text: h.text, note: h.note || '', createdAt: Date.now(),
+  };
+  await putCard(card);
+  return { card, created: true };
+}
+async function toggleCardFor(h) {
+  const existing = S.cards.find((c) => c.highlightId === h.id);
+  if (existing) { await deleteCard(existing); return; }
+  await cardFromHighlight(h);
+  toast('Saved to Cards', { label: 'View', run: () => go('#/cards') });
 }
 
 /* ---------- dictionary ---------- */
@@ -591,11 +600,17 @@ async function defineSheet(word, ctx) {
     ${res.empty ? '<p class="muted" style="margin-top:10px">No meaning found for this word.</p>' : ''}
     <div class="foot" style="justify-content:space-between">
       <a class="btn ghost sm" href="https://www.google.com/search?q=${encodeURIComponent(`${res.word} meaning`)}" target="_blank" rel="noopener">${icon('search')}Search the web</a>
-      ${!res.empty && ctx?.bookId ? '<button class="btn primary sm" type="button" id="wordCard">' + icon('cards') + 'Add to cards</button>' : ''}
+      ${!res.empty ? '<button class="btn primary sm" type="button" id="wordCard">' + icon('cards') + 'Save to Cards</button>' : ''}
     </div>`;
-  $('#wordCard', sh)?.addEventListener('click', () => {
-    const back = [res.translation, res.senses[0]?.def].filter(Boolean).join(' · ');
-    cardDialog({ bookId: ctx.bookId, front: `What does “${res.word}” mean?`, back, text: ctx.text || '' });
+  $('#wordCard', sh)?.addEventListener('click', async (e) => {
+    const meaning = res.senses.map((x) => x.def).slice(0, 2).join(' ');
+    await putCard({
+      id: uid(), kind: 'word', bookId: ctx?.bookId || null, text: res.word,
+      translation: res.translation || '', meaning, pos: res.senses[0]?.pos || '',
+      context: ctx?.text || '', chapter: R.chapter || '', createdAt: Date.now(), note: '',
+    });
+    e.target.closest('button').disabled = true;
+    e.target.closest('button').innerHTML = icon('check') + 'Saved';
   });
 }
 
@@ -683,10 +698,10 @@ async function openReader(id, jumpHighlight) {
 }
 
 function jumpTo(hid) {
-  const h = S.highlights.find((x) => x.id === hid);
+  const h = hid.startsWith('card:') ? S.cards.find((x) => x.id === hid.slice(5)) : S.highlights.find((x) => x.id === hid);
   if (!h || !R.reader) return;
   if (h.cfi) R.reader.goTo(h.cfi);
-  else R.reader.goTo({ page: h.page, offset: Math.max(0, (h.rects?.[0]?.y || 0) - 0.15) });
+  else if (h.page) R.reader.goTo({ page: h.page, offset: Math.max(0, (h.rects?.[0]?.y || 0) - 0.15) });
 }
 
 function onRelocate(info) {
@@ -911,7 +926,7 @@ function makeHighlight(sel, color) {
 
 function onSelect(sel) {
   closePop();
-  if (sel.text.length > 4000) { toast('That selection is too long to highlight.'); return; }
+  if (sel.text.length > 15000) { toast('That selection is too long. Try a smaller section.'); return; }
   const el = document.createElement('div');
   el.className = 'pop';
   el.setAttribute('role', 'toolbar');
@@ -935,7 +950,7 @@ function onSelect(sel) {
       await saveHighlight(h);
       sel.clear(); closePop();
       if (p === 'note') noteDialog(h);
-      else cardDialog({ bookId: h.bookId, highlightId: h.id, text: h.text, color: h.color });
+      else { await cardFromHighlight(h); toast('Saved to Cards', { label: 'View', run: () => { closeReader(false).then(() => go('#/cards')); } }); }
     }
   });
 }
@@ -958,7 +973,10 @@ function onHighlightClick(id, rect) {
     closePop();
     if (p === 'copy') copyText(h.text);
     if (p === 'note') noteDialog(h);
-    if (p === 'card') cardDialog({ bookId: h.bookId, highlightId: h.id, text: h.text, color: h.color });
+    if (p === 'card') {
+      const { created } = await cardFromHighlight(h);
+      toast(created ? 'Saved to Cards' : 'Already in Cards', { label: 'View', run: () => { closeReader(false).then(() => go('#/cards')); } });
+    }
     if (p === 'del') deleteHighlight(h);
   });
 }
@@ -967,105 +985,160 @@ async function copyText(t) {
 }
 document.addEventListener('pointerdown', (e) => { if (pop && !pop.el.contains(e.target) && !e.target.closest?.('.r-host')) closePop(); }, true);
 
-/* ---------- review ---------- */
-const RV = { showing: false, timer: null };
-function renderReview() {
-  clearTimeout(RV.timer);
-  const v = $('#view');
-  if (S.deck !== 'all' && !bookById(S.deck)) S.deck = 'all';
-  const inDeck = S.cards.filter((c) => S.deck === 'all' || c.bookId === S.deck);
-  const due = dueCards(S.deck);
-  const reviewedToday = inDeck.filter((c) => c.lastReviewed && today(new Date(c.lastReviewed)) === today()).length;
-  const decks = S.books.filter((b) => S.cards.some((c) => c.bookId === b.id));
-  const c = due[0];
-  const book = c && bookById(c.bookId);
-  const nextDue = inDeck.filter((x) => x.due > Date.now()).sort((a, b) => a.due - b.due)[0];
-
-  let stage;
-  if (!S.cards.length) {
-    stage = `<div class="done"><span class="big">${icon('cards')}</span><h2>No cards yet</h2><p class="muted">While reading, select text and tap <b>Card</b>. You can also make cards from the Notebook.</p></div>`;
-  } else if (!c) {
-    stage = `<div class="done"><span class="big">${icon('check')}</span><h2>All caught up</h2><p class="muted">${reviewedToday ? `${plural(reviewedToday, 'card')} reviewed today. ` : ''}${nextDue ? `Next card ${untilText(nextDue.due)}.` : ''}</p></div>`;
-    if (nextDue && nextDue.due - Date.now() < 15 * 60e3) RV.timer = setTimeout(() => { if (currentRoute().name === 'review') renderReview(); }, nextDue.due - Date.now() + 500);
-  } else {
-    RV.showing = false;
-    stage = `
-      <div class="qcard" id="qcard">
-        <span class="src">${esc(book?.title || 'Card')}</span>
-        <p class="q">${esc(c.front)}</p>
-        <div id="ansWrap" hidden>
-          <p class="ans">${esc(c.back || '—')}</p>
-          ${c.context && c.context !== c.back ? `<p class="ctx" style="margin-top:12px">${esc(c.context)}</p>` : ''}
-        </div>
-      </div>
-      <button class="reveal" type="button" id="reveal">Show answer <span class="kbd">Space</span></button>
-      <div class="grade" id="grade" hidden>
-        <button type="button" class="again" data-g="again">Again<small>${previewLabel(c, 'again')}</small></button>
-        <button type="button" class="good" data-g="good">Good<small>${previewLabel(c, 'good')}</small></button>
-        <button type="button" class="easy" data-g="easy">Easy<small>${previewLabel(c, 'easy')}</small></button>
-      </div>`;
+/* ---------- cards ---------- */
+function filteredCards() {
+  const q = S.cardsView.q.trim().toLowerCase();
+  return S.cards
+    .filter((c) => (S.cardsView.book === 'all' || c.bookId === S.cardsView.book) &&
+      (!q || [c.text, c.note, c.meaning, c.translation].some((x) => (x || '').toLowerCase().includes(q))))
+    .sort((a, b) => b.createdAt - a.createdAt);
+}
+function cardHTML(c) {
+  const b = bookById(c.bookId);
+  const src = [b?.title, c.chapter].filter(Boolean).map(esc).join(' · ');
+  const deva = /[\u0900-\u097F]/.test(c.text);
+  const acts = `
+    ${c.kind !== 'word' && b ? `<button class="ib" type="button" data-cact="open" aria-label="Open in book" title="Open in book">${icon('open')}</button>` : ''}
+    <button class="ib" type="button" data-cact="note" aria-label="Note" title="Note">${icon('note')}</button>
+    <button class="ib" type="button" data-cact="copy" aria-label="Copy" title="Copy">${icon('copy')}</button>
+    <button class="ib" type="button" data-cact="share" aria-label="Save as image" title="Save as image">${icon('download')}</button>
+    <button class="ib" type="button" data-cact="del" aria-label="Remove from Cards" title="Remove">${icon('trash')}</button>`;
+  if (c.kind === 'word') {
+    return `<article class="qc glass word" data-card="${c.id}">
+      <span class="kind">Word</span>
+      <div class="w">${esc(c.text)}${c.pos ? `<small>${esc(c.pos)}</small>` : ''}</div>
+      ${c.translation ? `<div class="tr">${esc(c.translation)}</div>` : ''}
+      ${c.meaning ? `<p class="mean">${esc(c.meaning)}</p>` : ''}
+      ${c.note ? `<div class="note">${esc(c.note)}</div>` : ''}
+      <div class="foot"><span>${src || relTime(c.createdAt)}</span><span class="acts">${acts}</span></div>
+    </article>`;
   }
-
+  return `<article class="qc glass" data-card="${c.id}" style="--c:${HL_COLORS[c.color]?.fill || 'var(--a1)'}">
+    <blockquote class="${deva ? 'deva-q' : ''}">${esc(c.text)}</blockquote>
+    ${c.note ? `<div class="note">${esc(c.note)}</div>` : ''}
+    <div class="foot"><span>${src}</span><span class="acts">${acts}</span></div>
+  </article>`;
+}
+function renderCards() {
+  const v = $('#view');
+  if (S.cardsView.book !== 'all' && !bookById(S.cardsView.book)) S.cardsView.book = 'all';
+  const list = filteredCards();
+  const booksWith = S.books.filter((b) => S.cards.some((c) => c.bookId === b.id));
   v.innerHTML = `
-    <div class="view-head"><h1>Review</h1>
-      <button class="btn soft" type="button" id="newCard">${icon('plus')}New card</button></div>
-    <div class="review">
-      <div class="deck glass">
-        <div class="deck-top">
-          <select class="select" id="deckSel" aria-label="Deck"><option value="all">All cards</option>${decks.map((b) => `<option value="${b.id}" ${S.deck === b.id ? 'selected' : ''}>${esc(b.title)}</option>`).join('')}</select>
-          <div class="counts"><span>Due <b>${due.length}</b></span><span>Done today <b>${reviewedToday}</b></span></div>
-        </div>
-        ${stage}
-      </div>
-      <aside class="side glass">
-        <h3>Cards <span class="muted" style="font-weight:500">${inDeck.length}</span></h3>
-        ${inDeck.length ? `<div class="clist">${[...inDeck].sort((a, b) => b.createdAt - a.createdAt).map((x) => `
-          <div class="citem" data-c="${x.id}"><p title="${esc(x.front)}">${esc(x.front)}</p><small>${x.due <= Date.now() ? 'Due' : untilText(x.due)}</small>
-            <button class="ib" type="button" data-ce="edit" aria-label="Edit card">${icon('edit')}</button>
-            <button class="ib" type="button" data-ce="del" aria-label="Delete card">${icon('trash')}</button></div>`).join('')}</div>` : '<p class="muted" style="font-size:14px">Cards you make appear here.</p>'}
-      </aside>
-    </div>`;
-
-  $('#deckSel').addEventListener('change', (e) => { S.deck = e.target.value; renderReview(); });
-  $('#newCard').addEventListener('click', () => {
-    const bid = S.deck !== 'all' ? S.deck : (S.books[0]?.id || null);
-    cardDialog({ bookId: bid, front: '', back: '' }, () => renderReview());
+    <div class="view-head"><h1>Cards <span class="muted" style="font-weight:500;font-size:.6em">${S.cards.length || ''}</span></h1>
+      ${S.cards.length ? `<button class="btn soft" type="button" id="cardsExport">${icon('download')}Export</button>` : ''}</div>
+    ${S.cards.length ? `<div class="toolbar" style="margin-bottom:20px">
+      <label class="search">${icon('search')}<input class="input" id="cardsSearch" type="search" placeholder="Search cards" value="${esc(S.cardsView.q)}" aria-label="Search cards"></label>
+      <select class="select" id="cardsBook" aria-label="Book"><option value="all">All books</option>${booksWith.map((b) => `<option value="${b.id}" ${S.cardsView.book === b.id ? 'selected' : ''}>${esc(b.title)}</option>`).join('')}</select>
+    </div>` : ''}
+    ${!S.cards.length
+      ? `<div class="empty" style="margin-top:10px"><span class="big">${icon('cards')}</span><h2>Save the lines that matter</h2><p>While reading, select a sentence or a whole section and tap <b>Card</b>. Words you look up can be saved here too.</p><a class="btn soft" href="#/library">Go to library</a></div>`
+      : list.length ? `<div class="qgrid">${list.map(cardHTML).join('')}</div>` : '<p class="muted">No cards match your search.</p>'}`;
+  $('#cardsSearch')?.addEventListener('input', (e) => {
+    S.cardsView.q = e.target.value;
+    const g = $('.qgrid');
+    const l = filteredCards();
+    if (g) g.innerHTML = l.map(cardHTML).join('');
+    else renderCards();
   });
-  $('#reveal')?.addEventListener('click', reveal);
-  $('#grade')?.addEventListener('click', (e) => { const b = e.target.closest('[data-g]'); if (b) grade(c, b.dataset.g); });
-  $$('.citem [data-ce]').forEach((b) => b.addEventListener('click', async () => {
-    const card = S.cards.find((x) => x.id === b.closest('.citem').dataset.c);
-    if (!card) return;
-    if (b.dataset.ce === 'edit') cardDialog({ bookId: card.bookId, existing: card }, () => renderReview());
-    else {
-      await db.del('cards', card.id);
-      S.cards = S.cards.filter((x) => x.id !== card.id);
-      renderReview(); updateBadges();
-      toast('Card deleted', { label: 'Undo', run: async () => { await db.put('cards', card); S.cards.push(card); renderReview(); updateBadges(); } });
-    }
-  }));
-  RV.current = c;
+  $('#cardsBook')?.addEventListener('change', (e) => { S.cardsView.book = e.target.value; renderCards(); });
+  $('#cardsExport')?.addEventListener('click', exportCards);
 }
-function reveal() {
-  if (RV.showing || !$('#ansWrap')) return;
-  RV.showing = true;
-  $('#ansWrap').hidden = false;
-  $('#reveal').hidden = true;
-  $('#grade').hidden = false;
-  $('#grade button.good')?.focus();
-}
-async function grade(c, g) {
-  const next = schedule(c, g);
-  await db.put('cards', next);
-  S.cards = S.cards.map((x) => (x.id === c.id ? next : x));
-  $('#qcard')?.classList.add('out');
-  setTimeout(() => { renderReview(); updateBadges(); }, 260);
-}
-document.addEventListener('keydown', (e) => {
-  if (currentRoute().name !== 'review' || overlay || e.target.closest?.('input, textarea, select')) return;
-  if (e.key === ' ' && !RV.showing && $('#reveal')) { e.preventDefault(); reveal(); }
-  else if (RV.showing && RV.current && ['1', '2', '3'].includes(e.key)) grade(RV.current, ['again', 'good', 'easy'][Number(e.key) - 1]);
+$('#view').addEventListener('click', async (e) => {
+  const btn = e.target.closest('.qc [data-cact]');
+  if (!btn) return;
+  const c = S.cards.find((x) => x.id === btn.closest('.qc').dataset.card);
+  if (!c) return;
+  const a = btn.dataset.cact;
+  if (a === 'open') {
+    if (c.highlightId && S.highlights.some((h) => h.id === c.highlightId)) go(`#/read/${c.bookId}?h=${c.highlightId}`);
+    else go(`#/read/${c.bookId}?c=${c.id}`);
+  }
+  if (a === 'note') noteDialog(c, putCard, () => renderCards());
+  if (a === 'copy') copyText(c.kind === 'word' ? [c.text, c.translation, c.meaning].filter(Boolean).join(' — ') : c.text);
+  if (a === 'share') shareImage(c);
+  if (a === 'del') { await deleteCard(c); renderCards(); }
 });
+function exportCards() {
+  const lines = ['# Pathak cards', ''];
+  for (const c of filteredCards()) {
+    const b = bookById(c.bookId);
+    if (c.kind === 'word') lines.push(`**${c.text}**${c.translation ? ` (${c.translation})` : ''}: ${c.meaning || ''}`);
+    else lines.push(`> ${c.text.replace(/\n+/g, '\n> ')}`);
+    if (c.note) lines.push('', `Note: ${c.note}`);
+    if (b) lines.push('', `— *${b.title}*${c.chapter ? `, ${c.chapter}` : ''}`);
+    lines.push('', '---', '');
+  }
+  download(new Blob([lines.join('\n')], { type: 'text/markdown' }), `pathak-cards-${today()}.md`);
+}
+
+// Render a card as a shareable image (1080×1350).
+async function shareImage(c) {
+  const W = 1080;
+  const H = 1350;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const x = cv.getContext('2d');
+  const deva = /[\u0900-\u097F]/.test(c.text);
+  const serif = deva ? '"Tiro Devanagari Hindi", "Literata", serif' : '"Literata", Georgia, serif';
+  try { await Promise.all([document.fonts.load(`500 48px ${serif}`), document.fonts.load('700 30px "Hanken Grotesk"'), document.fonts.load('700 40px "Mukta"')]); } catch { /* fallback fonts */ }
+  const g = x.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, '#FF8A1F'); g.addColorStop(0.5, '#FF3D7F'); g.addColorStop(1, '#7B5CFF');
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  const pad = 90;
+  const cw = W - pad * 2;
+  x.fillStyle = 'rgba(255,255,255,0.96)';
+  x.beginPath(); x.roundRect(pad, pad, cw, H - pad * 2, 48); x.fill();
+  const text = c.kind === 'word' ? c.text : c.text;
+  let size = 58;
+  let lines;
+  const wrap = (t, s) => {
+    x.font = `500 ${s}px ${serif}`;
+    const out = [];
+    for (const para of t.split(/\n+/)) {
+      let line = '';
+      for (const w of para.split(/\s+/)) {
+        const test = line ? `${line} ${w}` : w;
+        if (x.measureText(test).width > cw - 140 && line) { out.push(line); line = w; } else line = test;
+      }
+      if (line) out.push(line);
+    }
+    return out;
+  };
+  const maxH = H - pad * 2 - 360;
+  do { lines = wrap(text, size); size -= 2; } while (lines.length * size * 1.45 > maxH && size > 26);
+  size += 2;
+  const lh = size * 1.45;
+  let y = pad + 150 + (maxH - lines.length * lh) / 2;
+  x.fillStyle = '#FF3D7F';
+  x.font = `700 140px ${serif}`;
+  x.fillText('“', pad + 60, pad + 170);
+  x.fillStyle = '#1A1626';
+  x.font = `500 ${size}px ${serif}`;
+  for (const l of lines) { x.fillText(l, pad + 70, y + size); y += lh; }
+  if (c.kind === 'word' && (c.translation || c.meaning)) {
+    x.font = '500 34px "Hanken Grotesk", sans-serif';
+    x.fillStyle = '#676179';
+    x.fillText([c.translation, c.pos].filter(Boolean).join(' · ').slice(0, 60), pad + 70, y + 40);
+  }
+  const b = bookById(c.bookId);
+  x.fillStyle = '#676179';
+  x.font = '600 30px "Hanken Grotesk", sans-serif';
+  const src = [b?.title, b?.author].filter(Boolean).join(' · ');
+  let srcT = src;
+  while (srcT && x.measureText(srcT).width > cw - 140) srcT = srcT.slice(0, -2);
+  if (srcT !== src) srcT += '…';
+  x.fillText(srcT, pad + 70, H - pad - 110);
+  const lg = x.createLinearGradient(pad + 70, 0, pad + 130, 0);
+  lg.addColorStop(0, '#FF8A1F'); lg.addColorStop(1, '#7B5CFF');
+  x.fillStyle = lg;
+  x.beginPath(); x.roundRect(pad + 70, H - pad - 80, 44, 44, 12); x.fill();
+  x.fillStyle = '#fff'; x.font = '700 28px "Mukta", sans-serif'; x.textAlign = 'center';
+  x.fillText('प', pad + 92, H - pad - 49);
+  x.textAlign = 'left'; x.fillStyle = '#1A1626'; x.font = '700 28px "Hanken Grotesk", sans-serif';
+  x.fillText('Pathak', pad + 128, H - pad - 49);
+  cv.toBlob((blob) => { if (blob) { download(blob, `pathak-card-${today()}.png`); toast('Image saved'); } }, 'image/png');
+}
 
 /* ---------- app settings ---------- */
 function appSettings() {

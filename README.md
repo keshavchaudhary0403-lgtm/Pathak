@@ -9,7 +9,7 @@ A free e-reader that runs in the browser. Live at https://pathak-woad.vercel.app
 - Highlights in 4 colours, notes, copy
 - Dictionary: English meaning with Hindi word, and Hindi to English
 - Notebook: search, filter, Markdown export
-- Flashcards from highlights or words, spaced-repetition review
+- Cards: save important sentences, sections or words; search, notes, export, share as image
 - Reading streak, minutes read, activity heatmap
 - Backup and restore, installable app with offline support
 
