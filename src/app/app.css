@@ -440,3 +440,15 @@ a.stat{transition:transform .2s}
   .pop .sep{margin:0 2px}
   .pop .pb{min-width:0;padding:5px 6px;font-size:10.5px}
 }
+
+/* snip tool */
+.snip{position:absolute;inset:0;z-index:20;cursor:crosshair;touch-action:none;background:rgba(10,8,16,.18)}
+.snip-hint{position:absolute;left:50%;top:calc(14px + var(--top));transform:translateX(-50%);display:flex;align-items:center;gap:10px;padding:8px 8px 8px 14px;border-radius:999px;background:#1B1724;color:#F4F1FA;font-size:14px;font-weight:600;box-shadow:0 14px 36px -12px rgba(0,0,0,.5);white-space:nowrap;cursor:default;max-width:calc(100vw - 24px)}
+.snip-hint span{overflow:hidden;text-overflow:ellipsis}
+.snip-hint .btn{background:rgba(255,255,255,.14);color:#fff}
+.snip-box{position:fixed;border:2px solid #fff;border-radius:6px;box-shadow:0 0 0 9999px rgba(10,8,16,.35),0 0 0 1px var(--a2) inset;pointer-events:none}
+.snip-prev{border-radius:14px;overflow:hidden;background:#fff;border:1px solid var(--line);max-height:46vh;display:grid;place-items:center}
+.snip-prev img{max-width:100%;max-height:46vh;display:block}
+.qc.snipcard{padding-top:16px}
+.qc.snipcard::before{background:var(--grad)}
+.qc.snipcard img{width:100%;border-radius:12px;background:#fff;border:1px solid var(--line);display:block}

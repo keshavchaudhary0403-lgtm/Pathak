@@ -716,6 +716,7 @@ async function openReader(id, jumpHighlight) {
   $('#rChapter').textContent = b.author || '';
   $('#rLoading').hidden = false;
   $('[data-r="zoomin"]').hidden = b.type !== 'pdf';
+  $('[data-r="snip"]').hidden = b.type !== 'pdf';
   $('[data-r="zoomout"]').hidden = b.type !== 'pdf';
   b.lastOpened = Date.now();
   db.put('books', b);
@@ -816,7 +817,7 @@ async function closeReader(navigate = true) {
   clearInterval(R.tick);
   const book = R.book;
   if (book) { book.position = R.pos ?? book.position; book.progress = Math.max(0, Math.min(1, R.pct || 0)); }
-  try { closePop(); closeOverlay(); } catch { /* ignore */ }
+  try { closePop(); closeOverlay(); endSnip(); } catch { /* ignore */ }
   try { R.reader?.destroy(); } catch { /* ignore */ }
   R.reader = null;
   R.active = false;
@@ -830,6 +831,7 @@ async function closeReader(navigate = true) {
 }
 
 function onKey(e) {
+  if (snipEl && e.key === 'Escape') { endSnip(); return; }
   if (!R.active || overlay) {
     if (e.key === 'Escape') closeOverlay();
     return;
@@ -858,6 +860,7 @@ rEl.addEventListener('click', (e) => {
   if (a === 'toc') tocDrawer();
   if (a === 'settings') readerSettings();
   if (a === 'save') saveCardFromBar();
+  if (a === 'snip') startSnip();
   if (a === 'zoomin' || a === 'zoomout') {
     const cur = S.settings.pdfZoom === 'fit' ? 1 : Number(S.settings.pdfZoom) || 1;
     let z = a === 'zoomin' ? cur * 1.25 : cur / 1.25;
@@ -1082,6 +1085,94 @@ async function copyText(t) {
   try { await navigator.clipboard.writeText(t); toast('Copied'); } catch { toast("Couldn't copy. Select the text and copy it manually."); }
 }
 document.addEventListener('pointerdown', (e) => { if (pop && !pop.el.contains(e.target) && !e.target.closest?.('.r-host, [data-r="save"]')) closePop(); }, true);
+/* ---------- snip (PDF): capture a region as an image card ---------- */
+let snipEl = null;
+function endSnip() { snipEl?.remove(); snipEl = null; }
+function startSnip() {
+  if (R.reader?.kind !== 'pdf' || snipEl) return;
+  closePop();
+  rEl.classList.remove('immersive');
+  const el = document.createElement('div');
+  el.className = 'snip';
+  el.innerHTML = `<div class="snip-hint">${icon('crop')}<span>Drag over the part you want to save</span><button type="button" class="btn sm" data-snip="cancel">Cancel</button></div><div class="snip-box" hidden></div>`;
+  rEl.appendChild(el);
+  snipEl = el;
+  const box = el.querySelector('.snip-box');
+  let start = null;
+  let cur = null;
+  const norm = (a, b) => ({ x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(a.x - b.x), h: Math.abs(a.y - b.y) });
+  el.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('.snip-hint')) return;
+    e.preventDefault();
+    el.setPointerCapture(e.pointerId);
+    start = { x: e.clientX, y: e.clientY };
+    cur = start;
+    box.hidden = false;
+    Object.assign(box.style, { left: `${start.x}px`, top: `${start.y}px`, width: '0px', height: '0px' });
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (!start) return;
+    cur = { x: e.clientX, y: e.clientY };
+    const r = norm(start, cur);
+    Object.assign(box.style, { left: `${r.x}px`, top: `${r.y}px`, width: `${r.w}px`, height: `${r.h}px` });
+  });
+  el.addEventListener('pointerup', async () => {
+    if (!start) return;
+    const r = norm(start, cur);
+    start = null;
+    if (r.w < 12 || r.h < 12) { box.hidden = true; return; }
+    // Pick the page the box overlaps most, and clip the box to it.
+    let best = null;
+    let bestArea = 0;
+    for (const pr of R.reader.pageRects()) {
+      const ix = Math.max(0, Math.min(r.x + r.w, pr.rect.right) - Math.max(r.x, pr.rect.left));
+      const iy = Math.max(0, Math.min(r.y + r.h, pr.rect.bottom) - Math.max(r.y, pr.rect.top));
+      if (ix * iy > bestArea) { bestArea = ix * iy; best = pr; }
+    }
+    if (!best) { box.hidden = true; toast('Drag over the page to capture a part of it.'); return; }
+    const pb = best.rect;
+    const x1 = Math.max(r.x, pb.left); const y1 = Math.max(r.y, pb.top);
+    const x2 = Math.min(r.x + r.w, pb.right); const y2 = Math.min(r.y + r.h, pb.bottom);
+    const rel = { x: (x1 - pb.left) / pb.width, y: (y1 - pb.top) / pb.height, w: (x2 - x1) / pb.width, h: (y2 - y1) / pb.height };
+    el.querySelector('.snip-hint span').textContent = 'Capturing…';
+    try {
+      const shot = await R.reader.snip(best.page, rel);
+      endSnip();
+      snipPreview({ ...shot, page: best.page, rel });
+    } catch (err) {
+      console.error(err);
+      endSnip();
+      toast("Couldn't capture that part. Try again.");
+    }
+  });
+  el.addEventListener('wheel', (e) => { e.preventDefault(); R.reader?.scrollBy(e.deltaX, e.deltaY); }, { passive: false });
+  el.querySelector('[data-snip="cancel"]').addEventListener('click', endSnip);
+}
+function snipPreview({ blob, w, h, page, rel }) {
+  const url = URL.createObjectURL(blob);
+  const book = R.book;
+  const card = {
+    id: uid(), kind: 'image', image: blob, imgW: w, imgH: h, type: 'pdf',
+    bookId: book.id, page, rects: [rel], chapter: `Page ${page}`, text: '', note: '',
+    progress: R.pct, createdAt: Date.now(),
+  };
+  const sh = openSheet(`
+    <h2>Save this snip</h2>
+    <div class="snip-prev"><img src="${url}" alt="Captured part of page ${page}"></div>
+    <div class="field"><label for="snipNote">Note (optional)</label><textarea id="snipNote" style="min-height:64px" placeholder="Why does this matter to you?"></textarea></div>
+    <div class="foot"><button class="btn ghost" type="button" data-x="cancel">Cancel</button><button class="btn soft" type="button" data-x="dl">${icon('download')}Download card</button><button class="btn primary" type="button" data-x="save">${icon('cards')}Save to Cards</button></div>`, { dialog: true });
+  sh.addEventListener('click', async (e) => {
+    const x = e.target.closest('[data-x]')?.dataset.x;
+    if (!x) return;
+    card.note = $('#snipNote', sh).value.trim();
+    if (x === 'cancel') { closeOverlay(); URL.revokeObjectURL(url); return; }
+    if (x === 'dl') { await shareImage(card); return; }
+    await putCard(card);
+    closeOverlay();
+    toast('Saved to Cards', { label: 'View', run: () => { closeReader(false).then(() => go('#/cards')); } });
+  });
+}
+
 async function saveCardFromBar() {
   if (pop?.sel) {
     const sel = pop.sel;
@@ -1095,7 +1186,8 @@ async function saveCardFromBar() {
     closePop();
     toast(created ? 'Saved to Cards' : 'Already in Cards');
   } else {
-    toast('Select a sentence or section, then tap Save card');
+    if (R.reader?.kind === 'pdf') startSnip();
+    else toast('Select a sentence or section, then tap Save card');
   }
 }
 
@@ -1116,6 +1208,12 @@ function filteredCards() {
       (!q || [c.text, c.note, c.meaning, c.translation].some((x) => (x || '').toLowerCase().includes(q))))
     .sort((a, b) => b.createdAt - a.createdAt);
 }
+const cardImgs = new Map();
+function cardImgURL(c) {
+  if (!c.image) return '';
+  if (!cardImgs.has(c.id)) cardImgs.set(c.id, URL.createObjectURL(c.image));
+  return cardImgs.get(c.id);
+}
 function cardHTML(c) {
   const b = bookById(c.bookId);
   const src = [b?.title, c.chapter].filter(Boolean).map(esc).join(' · ');
@@ -1126,6 +1224,13 @@ function cardHTML(c) {
     <button class="ib" type="button" data-cact="copy" aria-label="Copy" title="Copy">${icon('copy')}</button>
     <button class="ib" type="button" data-cact="share" aria-label="Save as image" title="Save as image">${icon('download')}</button>
     <button class="ib" type="button" data-cact="del" aria-label="Remove from Cards" title="Remove">${icon('trash')}</button>`;
+  if (c.kind === 'image') {
+    return `<article class="qc glass snipcard" data-card="${c.id}">
+      <img class="${b ? 'clk' : ''}" ${b ? 'data-cact="open" title="Open in book"' : ''} src="${cardImgURL(c)}" alt="Snip from ${esc(b?.title || 'a book')}" loading="lazy">
+      ${c.note ? `<div class="note">${esc(c.note)}</div>` : ''}
+      <div class="foot">${b ? `<button class="src-l clk" type="button" data-cact="open">${src}</button>` : `<span>${src}</span>`}<span class="acts">${acts}</span></div>
+    </article>`;
+  }
   if (c.kind === 'word') {
     return `<article class="qc glass word" data-card="${c.id}">
       <span class="kind">Word</span>
@@ -1178,7 +1283,12 @@ $('#view').addEventListener('click', async (e) => {
     else go(`#/read/${c.bookId}?c=${c.id}`);
   }
   if (a === 'note') noteDialog(c, putCard, () => renderCards());
-  if (a === 'copy') copyText(c.kind === 'word' ? [c.text, c.translation, c.meaning].filter(Boolean).join(' — ') : c.text);
+  if (a === 'copy') {
+    if (c.kind === 'image') {
+      try { await navigator.clipboard.write([new ClipboardItem({ [c.image.type || 'image/png']: c.image })]); toast('Image copied'); }
+      catch { toast("This browser can't copy images. Use download instead."); }
+    } else copyText(c.kind === 'word' ? [c.text, c.translation, c.meaning].filter(Boolean).join(' — ') : c.text);
+  }
   if (a === 'share') shareImage(c);
   if (a === 'del') { await deleteCard(c); renderCards(); }
 });
@@ -1186,7 +1296,8 @@ function exportCards() {
   const lines = ['# Pathak cards', ''];
   for (const c of filteredCards()) {
     const b = bookById(c.bookId);
-    if (c.kind === 'word') lines.push(`**${c.text}**${c.translation ? ` (${c.translation})` : ''}: ${c.meaning || ''}`);
+    if (c.kind === 'image') lines.push(`*[Snip from ${c.chapter || 'a page'}]*`);
+    else if (c.kind === 'word') lines.push(`**${c.text}**${c.translation ? ` (${c.translation})` : ''}: ${c.meaning || ''}`);
     else lines.push(`> ${c.text.replace(/\n+/g, '\n> ')}`);
     if (c.note) lines.push('', `Note: ${c.note}`);
     if (b) lines.push('', `— *${b.title}*${c.chapter ? `, ${c.chapter}` : ''}`);
@@ -1198,7 +1309,14 @@ function exportCards() {
 // Render a card as a shareable image (1080×1350).
 async function shareImage(c) {
   const W = 1080;
-  const H = 1350;
+  let H = 1350;
+  let bmp = null;
+  if (c.kind === 'image' && c.image) {
+    // Snips get a card height that fits the image, so wide snips aren't lost in empty space.
+    bmp = await createImageBitmap(c.image);
+    const sc = Math.min((W - 180 - 140) / bmp.width, 1000 / bmp.height, 3);
+    H = Math.round(Math.max(760, 180 + 70 + bmp.height * sc + 70 + 190));
+  }
   const cv = document.createElement('canvas');
   cv.width = W; cv.height = H;
   const x = cv.getContext('2d');
@@ -1212,6 +1330,24 @@ async function shareImage(c) {
   const cw = W - pad * 2;
   x.fillStyle = 'rgba(255,255,255,0.96)';
   x.beginPath(); x.roundRect(pad, pad, cw, H - pad * 2, 48); x.fill();
+  if (bmp) {
+    const top = pad + 70;
+    const bottom = H - pad - 190;
+    const maxW = cw - 140;
+    const maxH = bottom - top;
+    const s = Math.min(maxW / bmp.width, maxH / bmp.height, 3);
+    const dw = bmp.width * s;
+    const dh = bmp.height * s;
+    const dx = pad + (cw - dw) / 2;
+    const dy = top + (maxH - dh) / 2;
+    x.save();
+    x.beginPath(); x.roundRect(dx, dy, dw, dh, 14); x.clip();
+    x.imageSmoothingQuality = 'high';
+    x.drawImage(bmp, dx, dy, dw, dh);
+    x.restore();
+    x.strokeStyle = 'rgba(26,22,38,0.10)'; x.lineWidth = 2;
+    x.beginPath(); x.roundRect(dx, dy, dw, dh, 14); x.stroke();
+  } else {
   // Drop quote marks left dangling by the selection (e.g. an opening quote with no closing one).
   const text = tidyQuote(c.text);
   let size = text.length < 60 ? 76 : text.length < 140 ? 64 : text.length < 300 ? 54 : 46;
@@ -1252,6 +1388,7 @@ async function shareImage(c) {
     x.fillStyle = '#5B3FD6';
     x.fillText([c.translation, c.pos].filter(Boolean).join(' · ').slice(0, 50), pad + 75, y + 46);
   }
+  }
   // Footer: divider, book title, chapter and author, Pathak mark on the right.
   const fit = (str, max) => {
     if (!str) return '';
@@ -1265,7 +1402,7 @@ async function shareImage(c) {
   x.fillRect(pad + 75, fy, cw - 150, 2);
   const textMax = cw - 150 - 190;
   const title = b?.title || '';
-  const sub = [c.chapter && !/^page \d+$/i.test(c.chapter) && c.chapter !== title ? c.chapter : '', b?.author].filter(Boolean).join(' · ');
+  const sub = [c.chapter && (c.kind === 'image' || !/^page \d+$/i.test(c.chapter)) && c.chapter !== title ? c.chapter : '', b?.author].filter(Boolean).join(' · ');
   if (title) {
     x.fillStyle = '#1A1626';
     x.font = '700 34px "Hanken Grotesk", sans-serif';
@@ -1286,7 +1423,7 @@ async function shareImage(c) {
   x.fillText('प', lx + 22, ly + 32);
   x.textAlign = 'left'; x.fillStyle = '#1A1626'; x.font = '700 30px "Hanken Grotesk", sans-serif';
   x.fillText('Pathak', lx + 56, ly + 32);
-  cv.toBlob((blob) => { if (blob) { download(blob, `pathak-card-${today()}.png`); toast('Image saved'); } }, 'image/png');
+  cv.toBlob((blob) => { if (blob) { download(blob, `pathak-card-${today()}.png`); toast('Card image downloaded'); } }, 'image/png');
 }
 
 /* ---------- app settings ---------- */
@@ -1334,7 +1471,10 @@ function appSettings() {
       const data = JSON.parse(await f.text());
       if (data.app !== 'pathak') throw new Error();
       for (const h of data.highlights || []) await db.put('highlights', h);
-      for (const c of data.cards || []) await db.put('cards', c);
+      for (const c of data.cards || []) {
+        if (typeof c.image === 'string' && c.image.startsWith('data:')) c.image = await (await fetch(c.image)).blob();
+        await db.put('cards', c);
+      }
       for (const st of data.stats || []) {
         const cur = await db.get('stats', st.date);
         await db.put('stats', { date: st.date, seconds: Math.max(st.seconds, cur?.seconds || 0) });
@@ -1354,11 +1494,13 @@ function appSettings() {
     }
   });
 }
+const blobToDataURL = (b) => new Promise((res, rej) => { const f = new FileReader(); f.onload = () => res(f.result); f.onerror = rej; f.readAsDataURL(b); });
 async function exportBackup() {
+  const cards = await Promise.all(S.cards.map(async (c) => (c.image ? { ...c, image: await blobToDataURL(c.image) } : c)));
   const data = {
     app: 'pathak', version: 1, exportedAt: new Date().toISOString(),
     books: S.books.map(({ cover, locations, ...b }) => b),
-    highlights: S.highlights, cards: S.cards, stats: S.stats, settings: S.settings,
+    highlights: S.highlights, cards, stats: S.stats, settings: S.settings,
   };
   download(new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' }), `pathak-backup-${today()}.json`);
 }

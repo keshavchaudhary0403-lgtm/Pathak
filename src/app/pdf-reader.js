@@ -292,6 +292,29 @@ export async function openPdf({ book, blob, host, settings, highlights, on }) {
       } catch (e) { console.warn(e); }
     },
     goToPct: (p) => goTo({ page: Math.round(p * (n - 1)) + 1 }),
+    scrollBy: (dx, dy) => scroller.scrollBy(dx, dy),
+    get page() { return curPage; },
+    // Page boxes on screen, for the snip tool.
+    pageRects() {
+      return pages.map((p) => ({ page: Number(p.el.dataset.page), rect: p.el.getBoundingClientRect() }));
+    },
+    // Render a region of a page (fractions of the page) as a sharp PNG, straight from the PDF.
+    async snip(pageNum, rel) {
+      const page = await doc.getPage(pageNum);
+      const vp1 = page.getViewport({ scale: 1 });
+      const cropW = rel.w * vp1.width;
+      const scale = Math.max(2, Math.min(6, 1800 / Math.max(cropW, 1)));
+      const vp = page.getViewport({ scale, offsetX: -rel.x * vp1.width * scale, offsetY: -rel.y * vp1.height * scale });
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(rel.w * vp1.width * scale));
+      c.height = Math.max(1, Math.round(rel.h * vp1.height * scale));
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, c.width, c.height);
+      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+      const blob = await new Promise((res) => c.toBlob(res, 'image/png'));
+      return { blob, w: c.width, h: c.height };
+    },
     draw,
     undraw,
     async applySettings(s) {

@@ -10,6 +10,7 @@ A free e-reader that runs in the browser. Live at https://pathak-woad.vercel.app
 - Dictionary: English meaning with Hindi word, and Hindi to English
 - Notebook: search, filter, Markdown export
 - Cards: save important sentences, sections or words; search, notes, export, share as image
+- PDF snip: drag over any part of a page (works on scanned PDFs) to save it as an image card
 - Reading streak, minutes read, activity heatmap
 - Backup and restore, installable app with offline support
 
