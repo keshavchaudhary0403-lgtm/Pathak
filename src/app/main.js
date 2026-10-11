@@ -975,15 +975,31 @@ function tocDrawer(tab = 'toc') {
 /* selection popover */
 let pop = null;
 function closePop() { pop?.el.remove(); pop = null; }
+// On touch screens the phone shows its own Copy / Select all bar above the selection,
+// so Pathak's tools go below it (clear of the selection handles), or at the top when there's no room.
+const coarse = matchMedia('(pointer: coarse)');
 function placePop(el, rect) {
   document.body.appendChild(el);
   const w = el.offsetWidth;
   const h = el.offsetHeight;
+  const bottom = rect.bottom ?? rect.top + rect.height;
   let left = rect.left + rect.width / 2 - w / 2;
   left = Math.max(8, Math.min(innerWidth - w - 8, left));
-  let top = rect.top - h - 12;
-  if (top < 70) top = (rect.bottom ?? rect.top + rect.height) + 12;
-  top = Math.min(top, innerHeight - h - 8);
+  let top;
+  if (coarse.matches) {
+    const topBar = (document.querySelector('.r-top')?.getBoundingClientRect().bottom || 60) + 8;
+    const botBar = rEl.classList.contains('immersive') ? innerHeight - 12 : (document.querySelector('.r-bot')?.getBoundingClientRect().top || innerHeight) - 8;
+    top = bottom + 36;
+    if (top + h > botBar) {
+      top = topBar;
+      el.classList.add('docked');
+      left = Math.max(8, (innerWidth - w) / 2);
+    }
+  } else {
+    top = rect.top - h - 12;
+    if (top < 70) top = bottom + 12;
+  }
+  top = Math.max(8, Math.min(top, innerHeight - h - 8));
   el.style.left = `${left}px`;
   el.style.top = `${top}px`;
 }
