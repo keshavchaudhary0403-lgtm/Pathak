@@ -722,6 +722,12 @@ async function openReader(id, jumpHighlight) {
     key: onKey,
     saveLocations: (json) => { b.locations = json; db.put('books', b); },
     zoomChange: (z) => { S.settings.pdfZoom = z; db.setKV('settings', S.settings); },
+    pinch: (ratio) => {
+      const v = Math.max(70, Math.min(220, Math.round((S.settings.size * ratio) / 10) * 10));
+      if (v === S.settings.size) return;
+      updateSettings({ size: v });
+      toast(`Text size ${v}%`);
+    },
   };
   const host = $('#rHost');
   host.innerHTML = '';

@@ -425,3 +425,7 @@ a.stat{transition:transform .2s}
 .r-save:active{transform:scale(.97)}
 .r-save svg{width:16px;height:16px}
 @media (max-width:420px){.r-sw{gap:7px}.r-sw button{width:27px;height:27px}.r-save{padding:10px 15px;font-size:13.5px}}
+
+/* touch: we handle pinch ourselves inside the reader */
+#reader{touch-action:pan-x pan-y}
+.pdf-scroll{touch-action:pan-x pan-y}

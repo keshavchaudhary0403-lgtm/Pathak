@@ -1,6 +1,7 @@
 // PDF reader on pdf.js: continuous scroll, lazy page rendering, selectable text and highlights.
 import { pdfjs } from './pdfjs.js';
 import { THEMES, HL_COLORS } from './config.js';
+import { wheelPager, touchGestures } from './gestures.js';
 
 export async function openPdf({ book, blob, host, settings, highlights, on }) {
   const doc = await pdfjs.getDocument({ data: await blob.arrayBuffer() }).promise;
@@ -111,14 +112,14 @@ export async function openPdf({ book, blob, host, settings, highlights, on }) {
   const zoomOf = (z) => (z === 'fit' ? 1 : Number(z) || 1);
   let pinch = null;
   let pinchT = 0;
-  function previewZoom(target, cx, cy) {
+  function previewZoom(target, cx, cy, auto = true) {
     const cur = zoomOf(current.pdfZoom);
     pinch = Math.min(4, Math.max(0.5, target));
     const cr = column.getBoundingClientRect();
     column.style.transformOrigin = `${cx - cr.left}px ${cy - cr.top}px`;
     column.style.transform = `scale(${pinch / cur})`;
     clearTimeout(pinchT);
-    pinchT = setTimeout(commitZoom, 200);
+    if (auto) pinchT = setTimeout(commitZoom, 200);
   }
   function commitZoom() {
     if (pinch == null) return;
@@ -131,34 +132,37 @@ export async function openPdf({ book, blob, host, settings, highlights, on }) {
     relayout();
     on.zoomChange?.(val);
   }
-  let swipeAcc = 0;
-  let lastWheel = 0;
-  let swipeLocked = false;
+  const canPanX = () => scroller.scrollWidth > scroller.clientWidth + 2;
+  const hPager = wheelPager((dir) => goTo({ page: curPage + dir }), { axis: 'x', threshold: 60 });
   scroller.addEventListener('wheel', (e) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
       previewZoom((pinch ?? zoomOf(current.pdfZoom)) * Math.exp(-e.deltaY * 0.01), e.clientX, e.clientY);
       return;
     }
-    if (Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.3) {
+    if (canPanX()) return; // zoomed in: let the page pan sideways
+    if (Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.2) {
       e.preventDefault();
-      const now = Date.now();
-      const gap = now - lastWheel;
-      lastWheel = now;
-      if (gap > 300) swipeAcc = 0;
-      if (swipeLocked) { if (gap < 200) return; swipeLocked = false; swipeAcc = 0; }
-      swipeAcc += e.deltaX;
-      if (Math.abs(swipeAcc) > 60) {
-        goTo({ page: curPage + (swipeAcc > 0 ? 1 : -1) });
-        swipeAcc = 0;
-        swipeLocked = true;
-      }
+      hPager(e);
     }
   }, { passive: false });
+  // Touch: pinch to zoom, swipe sideways to turn the page.
+  let touchPinch = false;
+  let pinchBase = 1;
+  touchGestures(scroller, {
+    canSwipe: () => !canPanX() && window.getSelection()?.isCollapsed !== false,
+    onSwipe: (dir) => goTo({ page: curPage + dir }),
+    onPinchMove: (ratio, mid) => {
+      if (!touchPinch) { touchPinch = true; pinchBase = zoomOf(current.pdfZoom); }
+      previewZoom(pinchBase * ratio, mid.x, mid.y, false);
+    },
+    onPinchEnd: () => { touchPinch = false; commitZoom(); },
+  });
+  // Safari on a Mac trackpad sends gesture events for pinch.
   let gestureStart = 1;
   scroller.addEventListener('gesturestart', (e) => { e.preventDefault(); gestureStart = zoomOf(current.pdfZoom); });
-  scroller.addEventListener('gesturechange', (e) => { e.preventDefault(); previewZoom(gestureStart * e.scale, e.clientX, e.clientY); });
-  scroller.addEventListener('gestureend', (e) => { e.preventDefault(); clearTimeout(pinchT); commitZoom(); });
+  scroller.addEventListener('gesturechange', (e) => { e.preventDefault(); if (!touchPinch) previewZoom(gestureStart * e.scale, e.clientX, e.clientY); });
+  scroller.addEventListener('gestureend', (e) => { e.preventDefault(); if (!touchPinch) { clearTimeout(pinchT); commitZoom(); } });
 
   // Highlights: drawn below the text layer, hit-tested on click.
   function draw(h) {

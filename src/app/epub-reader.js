@@ -1,6 +1,7 @@
 // EPUB reader built on epub.js. Exposes a small interface the app shell drives.
 import ePub from 'epubjs';
 import { THEMES, FONTS, HL_COLORS, FONT_CSS_URL } from './config.js';
+import { wheelPager, touchGestures } from './gestures.js';
 
 function firstText(node) {
   if (node.nodeType === 3) return node;
@@ -62,32 +63,24 @@ export async function openEpub({ book, blob, host, settings, highlights, on }) {
     `;
   };
 
-  // Mouse wheel and trackpad turn pages in paged mode. One gesture turns one page,
-  // waiting for the trackpad's momentum to settle before the next turn.
-  let wAcc = 0;
-  let lastWheel = 0;
-  let wLocked = false;
-  function onWheel(e) {
-    if (scrolled || e.ctrlKey || e.metaKey) return;
-    const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-    const now = Date.now();
-    const gap = now - lastWheel;
-    lastWheel = now;
-    if (gap > 300) wAcc = 0;
-    if (wLocked) { if (gap < 200) return; wLocked = false; wAcc = 0; }
-    wAcc += d;
-    if (Math.abs(wAcc) > 40) {
-      wAcc > 0 ? rendition.next() : rendition.prev();
-      wAcc = 0;
-      wLocked = true;
-    }
-  }
+  // Trackpad / wheel: one gesture turns one page (paged layout only).
+  const pager = wheelPager((dir) => (dir > 0 ? rendition.next() : rendition.prev()));
+  const onWheel = (e) => { if (!scrolled && !e.ctrlKey && !e.metaKey) pager(e); };
   host.addEventListener('wheel', onWheel, { passive: true });
+  const hasSelection = (doc) => { const s = doc?.getSelection?.(); return s && !s.isCollapsed; };
+  const touchOpts = (doc) => ({
+    canSwipe: () => !scrolled && !hasSelection(doc),
+    onSwipe: (dir) => (dir > 0 ? rendition.next() : rendition.prev()),
+    onPinchEnd: (ratio) => { if (Math.abs(ratio - 1) > 0.08) on.pinch?.(ratio); },
+  });
+  touchGestures(host, touchOpts(document));
 
   rendition.hooks.content.register((contents) => {
     contents.addStylesheet(FONT_CSS_URL);
     contents.addStylesheetCss(cssFor(current), 'pathak-style');
+    contents.addStylesheetCss('html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}', 'pathak-touch');
     contents.document.addEventListener('wheel', onWheel, { passive: true });
+    touchGestures(contents.document, touchOpts(contents.document));
   });
 
   function applyHostPadding(s) {
@@ -190,18 +183,7 @@ export async function openEpub({ book, blob, host, settings, highlights, on }) {
     });
   });
 
-  // Taps and swipes
-  let touchX = null;
-  let touchY = null;
-  rendition.on('touchstart', (e) => { touchX = e.changedTouches[0].screenX; touchY = e.changedTouches[0].screenY; });
-  rendition.on('touchend', (e) => {
-    if (touchX == null) return;
-    const dx = e.changedTouches[0].screenX - touchX;
-    const dy = e.changedTouches[0].screenY - touchY;
-    touchX = null;
-    if (scrolled || Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) return;
-    dx < 0 ? rendition.next() : rendition.prev();
-  });
+  // Taps
   rendition.on('click', (e) => {
     const win = e.view;
     if (win?.getSelection && !win.getSelection().isCollapsed) return;
