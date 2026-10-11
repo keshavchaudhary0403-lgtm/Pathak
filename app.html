@@ -83,12 +83,12 @@
 
 <section id="reader" hidden aria-label="Reader">
   <div class="r-top">
-    <button class="ib" type="button" data-r="close" aria-label="Back to library"><svg class="i"><use href="#i-back"/></svg></button>
-    <button class="ib" type="button" data-r="toc" aria-label="Contents and highlights"><svg class="i"><use href="#i-list"/></svg></button>
+    <button class="ib sq" type="button" data-r="close" aria-label="Back to library"><svg class="i"><use href="#i-back"/></svg></button>
     <div class="r-title"><b id="rTitle"></b><span id="rChapter"></span></div>
-    <button class="ib" type="button" data-r="zoomout" aria-label="Zoom out" hidden><svg class="i"><use href="#i-zoomout"/></svg></button>
-    <button class="ib" type="button" data-r="zoomin" aria-label="Zoom in" hidden><svg class="i"><use href="#i-zoomin"/></svg></button>
-    <button class="ib" type="button" data-r="settings" aria-label="Reading settings"><svg class="i"><use href="#i-aa"/></svg></button>
+    <button class="ib sq" type="button" data-r="zoomout" aria-label="Zoom out" hidden><svg class="i"><use href="#i-zoomout"/></svg></button>
+    <button class="ib sq" type="button" data-r="zoomin" aria-label="Zoom in" hidden><svg class="i"><use href="#i-zoomin"/></svg></button>
+    <button class="ib sq" type="button" data-r="toc" aria-label="Contents and highlights"><svg class="i"><use href="#i-list"/></svg></button>
+    <button class="ib sq aa" type="button" data-r="settings" aria-label="Reading settings">Aa</button>
   </div>
   <div class="r-stage">
     <div class="r-host" id="rHost"></div>
@@ -99,6 +99,15 @@
   <div class="r-bot">
     <input class="range" id="rRange" type="range" min="0" max="1000" value="0" aria-label="Position in book">
     <div class="r-row"><span id="rLeft"></span><span class="mid" id="rMid"></span><span id="rPct">0%</span></div>
+    <div class="r-actions">
+      <div class="r-sw" role="group" aria-label="Page colour">
+        <button type="button" data-rt="paper" aria-label="Paper page"></button>
+        <button type="button" data-rt="sepia" aria-label="Sepia page"></button>
+        <button type="button" data-rt="gray" aria-label="Dusk page"></button>
+        <button type="button" data-rt="night" aria-label="Night page"></button>
+      </div>
+      <button class="r-save" type="button" data-r="save"><svg class="i"><use href="#i-plus"/></svg>Save card</button>
+    </div>
   </div>
 </section>
 

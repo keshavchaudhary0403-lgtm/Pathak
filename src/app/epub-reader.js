@@ -39,8 +39,7 @@ export async function openEpub({ book, blob, host, settings, highlights, on }) {
     height: '100%',
     flow: scrolled ? 'scrolled' : 'paginated',
     manager: scrolled ? 'continuous' : 'default',
-    spread: 'auto',
-    minSpreadWidth: 980,
+    spread: 'none',
     allowScriptedContent: false,
   });
 
@@ -141,6 +140,7 @@ export async function openEpub({ book, blob, host, settings, highlights, on }) {
       pos: loc.start.cfi,
       chapter: chapterFor(loc.start.href),
       pagesLeftInChapter: d.total ? Math.max(0, d.total - d.page) : null,
+      loc: locationsReady ? ebook.locations.locationFromCfi(loc.start.cfi) : null,
       atStart: !!loc.atStart,
       atEnd: !!loc.atEnd,
     });

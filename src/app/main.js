@@ -681,6 +681,7 @@ const rEl = $('#reader');
 
 function applyReaderChrome() {
   const t = THEMES[S.settings.theme] || THEMES.paper;
+  $$('.r-sw [data-rt]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.rt === S.settings.theme)));
   rEl.style.setProperty('--r-bg', t.bg);
   rEl.style.setProperty('--r-fg', t.fg);
   rEl.dataset.ui = t.ui;
@@ -776,7 +777,7 @@ function onRelocate(info) {
     $('#rMid').textContent = info.pages - info.page > 0 ? `${plural(info.pages - info.page, 'page')} left` : 'Last page';
   } else {
     $('#rChapter').textContent = info.chapter || R.book.author || '';
-    $('#rLeft').textContent = R.reader?.locationsReady ? '' : 'Preparing…';
+    $('#rLeft').textContent = info.loc != null ? `Loc ${(info.loc + 1).toLocaleString('en-IN')}` : (R.reader?.locationsReady ? '' : 'Preparing…');
     if (info.pagesLeftInChapter != null) {
       const m = Math.round((info.pagesLeftInChapter * R.secPerPage) / 60);
       $('#rMid').textContent = info.pagesLeftInChapter === 0 ? 'End of chapter' : m < 1 ? 'Less than a minute left in chapter' : `${m} min left in chapter`;
@@ -828,6 +829,8 @@ document.addEventListener('keydown', (e) => {
 ['pointermove', 'pointerdown', 'wheel'].forEach((ev) => rEl.addEventListener(ev, () => { R.activityAt = Date.now(); }, { passive: true }));
 
 rEl.addEventListener('click', (e) => {
+  const sw = e.target.closest('.r-sw [data-rt]');
+  if (sw) { updateSettings({ theme: sw.dataset.rt }); return; }
   const b = e.target.closest('[data-r]');
   if (!b) return;
   const a = b.dataset.r;
@@ -836,6 +839,7 @@ rEl.addEventListener('click', (e) => {
   if (a === 'prev') R.reader?.prev();
   if (a === 'toc') tocDrawer();
   if (a === 'settings') readerSettings();
+  if (a === 'save') saveCardFromBar();
   if (a === 'zoomin' || a === 'zoomout') {
     const cur = S.settings.pdfZoom === 'fit' ? 1 : Number(S.settings.pdfZoom) || 1;
     let z = a === 'zoomin' ? cur * 1.25 : cur / 1.25;
@@ -1033,7 +1037,23 @@ function onHighlightClick(id, rect) {
 async function copyText(t) {
   try { await navigator.clipboard.writeText(t); toast('Copied'); } catch { toast("Couldn't copy. Select the text and copy it manually."); }
 }
-document.addEventListener('pointerdown', (e) => { if (pop && !pop.el.contains(e.target) && !e.target.closest?.('.r-host')) closePop(); }, true);
+document.addEventListener('pointerdown', (e) => { if (pop && !pop.el.contains(e.target) && !e.target.closest?.('.r-host, [data-r="save"]')) closePop(); }, true);
+async function saveCardFromBar() {
+  if (pop?.sel) {
+    const sel = pop.sel;
+    const h = makeHighlight(sel, 'yellow');
+    await saveHighlight(h);
+    await cardFromHighlight(h);
+    sel.clear(); closePop();
+    toast('Saved to Cards', { label: 'View', run: () => { closeReader(false).then(() => go('#/cards')); } });
+  } else if (pop?.h) {
+    const { created } = await cardFromHighlight(pop.h);
+    closePop();
+    toast(created ? 'Saved to Cards' : 'Already in Cards');
+  } else {
+    toast('Select a sentence or section, then tap Save card');
+  }
+}
 
 /* ---------- cards ---------- */
 // Drop quote marks left dangling by a selection (an opening quote with no closing one, or the reverse).
