@@ -230,7 +230,12 @@ export async function openPdf({ book, blob, host, settings, highlights, on }) {
         return;
       }
     }
-    on.tapCenter?.();
+    // Click the left or right edge to turn the page; the middle shows or hides the controls.
+    const sr = scroller.getBoundingClientRect();
+    const rel = (e.clientX - sr.left) / sr.width;
+    if (rel < 0.18) goTo({ page: curPage - 1 });
+    else if (rel > 0.82) goTo({ page: curPage + 1 });
+    else on.tapCenter?.();
   });
 
   const ro = new ResizeObserver(() => {

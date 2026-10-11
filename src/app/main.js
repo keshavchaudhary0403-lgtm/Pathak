@@ -855,6 +855,16 @@ rEl.addEventListener('click', (e) => {
     toast(val === 'fit' ? 'Fit to width' : `${Math.round(z * 100)}%`);
   }
 });
+// Clicks on the page area outside the book text (margins, wide screens): edges turn pages, middle toggles controls.
+$('.r-stage').addEventListener('click', (e) => {
+  if (!R.reader || R.reader.kind !== 'epub' || e.target.closest('button, iframe')) return;
+  if (S.settings.layout === 'scroll') return;
+  const r = e.currentTarget.getBoundingClientRect();
+  const rel = (e.clientX - r.left) / r.width;
+  if (rel < 0.35) R.reader.prev();
+  else if (rel > 0.65) R.reader.next();
+  else { if (pop) closePop(); else rEl.classList.toggle('immersive'); }
+});
 $('#rRange').addEventListener('input', (e) => {
   const p = e.target.value / 1000;
   e.target.style.setProperty('--p', `${p * 100}%`);
