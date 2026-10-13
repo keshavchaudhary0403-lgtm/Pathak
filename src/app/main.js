@@ -363,7 +363,7 @@ function sortedBooks() {
 
 function bookCardHTML(b) {
   const isNew = !b.lastOpened;
-  const extra = `<span class="type">${b.type.toUpperCase()}</span>${isNew ? '<span class="new">New</span>' : ''}`;
+  const extra = '';
   return `<div class="bk" data-id="${b.id}">
     <button class="open" type="button" data-open="${b.id}" aria-label="Read ${esc(b.title)}">${coverHTML(b, extra)}</button>
     <button class="more" type="button" data-more="${b.id}" aria-label="More options for ${esc(b.title)}">${icon('dots')}</button>
@@ -376,46 +376,35 @@ function renderLibrary() {
   const v = $('#view');
   const recent = [...S.books].filter((b) => b.lastOpened).sort((a, b) => b.lastOpened - a.lastOpened)[0];
   const st = streak();
-  const top = !recent ? '' : `
+  const top = !recent || S.books.length < 2 ? '' : `
     <div class="lib-top one">
       ${recent ? `<button class="continue glass" type="button" data-open="${recent.id}">
         ${coverHTML(recent)}
         <div class="info">
           <span class="eyebrow">Continue reading</span>
           <h2>${esc(recent.title)}</h2>
-          <span class="meta">${esc(recent.author || '')}${recent.author ? ' · ' : ''}${pct(recent.progress)} · ${relTime(recent.lastOpened)}</span>
+          <span class="meta">${pct(recent.progress)} read</span>
           <span class="pbar"><i style="width:${pct(recent.progress)}"></i></span>
         </div>
       </button>` : ''}
-    </div>
-    <div class="lib-stats">
-      <span>${icon('flame')}<b>${st}</b> day streak</span>
-      <span>${icon('clock')}<b>${minutesToday()}</b> min today</span>
-      <a href="#/cards">${icon('cards')}<b>${savedItems().length}</b> cards</a>
     </div>`;
 
   const books = sortedBooks();
   const lib = S.books.length
     ? `<div class="section-title"><span>Books <span class="muted" style="font-weight:500">${S.books.length}</span></span>
-        <div class="toolbar">
+        ${S.books.length > 6 ? `<div class="toolbar">
           <label class="search">${icon('search')}<input class="input" id="libSearch" type="search" placeholder="Search" value="${esc(S.libQuery)}" aria-label="Search books"></label>
           ${dropdownHTML('libSort', SORTS, S.libSort, 'Sort books')}
-        </div></div>
+        </div>` : ''}</div>
        ${books.length ? `<div class="grid" id="bookGrid">${books.map(bookCardHTML).join('')}</div>` : '<p class="muted">No books match your search.</p>'}`
     : `<div class="empty" style="margin-top:24px">
         <span class="big">${icon('book')}</span>
         <h2>Add your first book</h2>
-        <p>Drop an EPUB or PDF here, or choose one from your device.</p>
-        <div class="row"><button class="btn grad" type="button" data-add>${icon('plus')}Add book</button><button class="btn soft" type="button" id="addSample">Add the guide book</button></div>
+        <p>EPUB or PDF, from your device.</p>
+        <div class="row"><button class="btn grad" type="button" data-add>${icon('plus')}Add book</button><button class="btn soft" type="button" id="addSample">Try a sample</button></div>
       </div>`;
 
-  const free = `<div class="section-title"><span>Free books</span></div>
-    <div class="free">
-      <a class="glass" href="https://www.gutenberg.org" target="_blank" rel="noopener"><span class="m" style="--c:linear-gradient(135deg,#1F9D8A,#0E7C86)">G</span><span><b>Project Gutenberg</b><small>Classics, EPUB</small></span></a>
-      <a class="glass" href="https://standardebooks.org" target="_blank" rel="noopener"><span class="m" style="--c:linear-gradient(135deg,#3B82F6,#6366F1)">S</span><span><b>Standard Ebooks</b><small>Edited classics, EPUB</small></span></a>
-      <a class="glass" href="https://ncert.nic.in/textbook.php" target="_blank" rel="noopener"><span class="m" style="--c:linear-gradient(135deg,#FF8A1F,#F25C05)">N</span><span><b>NCERT</b><small>Textbooks, PDF</small></span></a>
-      <a class="glass" href="https://openlibrary.org" target="_blank" rel="noopener"><span class="m" style="--c:linear-gradient(135deg,#8B5CF6,#C026D3)">O</span><span><b>Open Library</b><small>Borrow books</small></span></a>
-    </div>`;
+  const free = `<p class="free-line">Free books: <a href="https://www.gutenberg.org" target="_blank" rel="noopener">Gutenberg</a> · <a href="https://standardebooks.org" target="_blank" rel="noopener">Standard Ebooks</a> · <a href="https://ncert.nic.in/textbook.php" target="_blank" rel="noopener">NCERT</a> · <a href="https://openlibrary.org" target="_blank" rel="noopener">Open Library</a></p>`;
 
   v.innerHTML = `${S.books.length ? top : ''}${lib}${free}`;
 
@@ -712,10 +701,10 @@ function onRelocate(info) {
     $('#rMid').textContent = info.pages - info.page > 0 ? `${plural(info.pages - info.page, 'page')} left` : 'Last page';
   } else {
     $('#rChapter').textContent = info.chapter || R.book.author || '';
-    $('#rLeft').textContent = info.loc != null ? `Loc ${(info.loc + 1).toLocaleString('en-IN')}` : (R.reader?.locationsReady ? '' : 'Preparing…');
+    $('#rLeft').textContent = '';
     if (info.pagesLeftInChapter != null) {
       const m = Math.round((info.pagesLeftInChapter * R.secPerPage) / 60);
-      $('#rMid').textContent = info.pagesLeftInChapter === 0 ? 'End of chapter' : m < 1 ? 'Less than a minute left in chapter' : `${m} min left in chapter`;
+      $('#rMid').textContent = info.pagesLeftInChapter === 0 ? 'End of chapter' : m < 1 ? 'Under a minute left' : `${m} min left`;
     } else $('#rMid').textContent = '';
   }
   clearTimeout(R.saveT);
@@ -1342,11 +1331,8 @@ function cardHTML(c) {
   const src = [b?.title, c.chapter].filter(Boolean).map(esc).join(' · ');
   const deva = /[\u0900-\u097F]/.test(c.text);
   const acts = `
-    ${c.kind !== 'word' && b ? `<button class="ib" type="button" data-cact="open" aria-label="Open in book" title="Open in book">${icon('open')}</button>` : ''}
-    <button class="ib" type="button" data-cact="note" aria-label="Note" title="Note">${icon('note')}</button>
-    <button class="ib" type="button" data-cact="copy" aria-label="Copy" title="Copy">${icon('copy')}</button>
-    <button class="ib" type="button" data-cact="share" aria-label="Save as image" title="Save as image">${icon('download')}</button>
-    <button class="ib" type="button" data-cact="del" aria-label="Remove from Cards" title="Remove">${icon('trash')}</button>`;
+    <button class="ib" type="button" data-cact="share" aria-label="Download as image" title="Download as image">${icon('download')}</button>
+    <button class="ib" type="button" data-cact="more" aria-label="More">${icon('dots')}</button>`;
   if (c.kind === 'image') {
     return `<article class="qc glass snipcard" data-card="${c.id}">
       <img class="${b ? 'clk' : ''}" ${b ? 'data-cact="open" title="Open in book"' : ''} src="${cardImgURL(c)}" alt="Snip from ${esc(b?.title || 'a book')}" loading="lazy">
@@ -1378,8 +1364,8 @@ function renderCards() {
   const booksWith = S.books.filter((b) => all.some((c) => c.bookId === b.id));
   v.innerHTML = `
     <div class="view-head"><h1>Cards <span class="muted" style="font-weight:500;font-size:.6em">${all.length || ''}</span></h1>
-      ${all.length ? `<button class="btn soft" type="button" id="cardsExport">${icon('download')}Export</button>` : ''}</div>
-    ${all.length ? `<div class="toolbar" style="margin-bottom:20px">
+      ${all.length ? `<button class="btn ghost sm" type="button" id="cardsExport">${icon('download')}Export</button>` : ''}</div>
+    ${all.length > 6 ? `<div class="toolbar" style="margin-bottom:20px">
       <label class="search">${icon('search')}<input class="input" id="cardsSearch" type="search" placeholder="Search cards" value="${esc(S.cardsView.q)}" aria-label="Search cards"></label>
       ${dropdownHTML('cardsBook', [['all', 'All books'], ...booksWith.map((b) => [b.id, b.title])], S.cardsView.book, 'Book')}
     </div>` : ''}
@@ -1401,7 +1387,19 @@ $('#view').addEventListener('click', async (e) => {
   if (!btn) return;
   const { item: c, isHl } = findSaved(btn.closest('.qc').dataset.card);
   if (!c) return;
-  const a = btn.dataset.cact;
+  let a = btn.dataset.cact;
+  if (a === 'more') {
+    const items = [];
+    if (c.kind !== 'word' && bookById(c.bookId)) items.push({ icon: 'open', label: 'Open in book', run: () => cardAction('open', c, isHl) });
+    items.push({ icon: 'note', label: c.note ? 'Edit note' : 'Add note', run: () => cardAction('note', c, isHl) });
+    items.push({ icon: 'copy', label: 'Copy', run: () => cardAction('copy', c, isHl) });
+    items.push({ icon: 'trash', label: 'Remove', danger: true, run: () => cardAction('del', c, isHl) });
+    openMenu(btn, items);
+    return;
+  }
+  cardAction(a, c, isHl);
+});
+async function cardAction(a, c, isHl) {
   if (a === 'open') {
     if (isHl) go(`#/read/${c.bookId}?h=${c.id}`);
     else if (c.highlightId && S.highlights.some((h) => h.id === c.highlightId)) go(`#/read/${c.bookId}?h=${c.highlightId}`);
@@ -1422,7 +1420,7 @@ $('#view').addEventListener('click', async (e) => {
     } else await deleteCard(c);
     renderCards();
   }
-});
+}
 function exportCards() {
   const lines = ['# Pathak cards', ''];
   for (const c of filteredCards()) {

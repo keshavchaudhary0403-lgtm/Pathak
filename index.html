@@ -28,7 +28,25 @@
 <meta name="twitter:title" content="Pathak Reader">
 <meta name="twitter:description" content="Free e-reader for EPUB and PDF with highlights, a Hindi-English dictionary and cards.">
 <meta name="twitter:image" content="https://pathak-woad.vercel.app/og-image.png">
-<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+/* simplified home */
+.hero{padding-block:56px 72px}
+.hero .lede{max-width:24em}
+.btn.big{padding:18px 28px;font-size:16px}
+section.simple{padding-block:24px 56px}
+.feats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.feat{display:flex;flex-direction:column;gap:6px;padding:22px;border-radius:24px;background:var(--glass);border:1px solid var(--glass-line);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);text-decoration:none;color:var(--ink);box-shadow:var(--shadow-s);transition:transform .2s,box-shadow .2s}
+.feat:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.feat .fi{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:var(--grad);color:#fff;margin-bottom:6px}
+.feat b{font:700 1.2rem var(--f-display);letter-spacing:-.01em}
+.feat span:last-child{color:var(--muted);font-size:14.5px}
+@media (max-width:900px){.feats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:440px){.feat{padding:18px}.feat b{font-size:1.05rem}}
+.free-lbl{font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-bottom:12px}
+.free-row{display:flex;flex-wrap:wrap;gap:8px}
+.free-row a{padding:10px 16px;border-radius:999px;background:var(--glass);border:1px solid var(--glass-line);color:var(--ink);text-decoration:none;font-weight:600;font-size:14.5px;transition:transform .15s,border-color .15s}
+.free-row a:hover{transform:translateY(-2px);border-color:var(--a3)}
+</style>
 <title>Pathak Reader</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -331,7 +349,7 @@ section{padding-block:84px}
 .cta p{opacity:.88;margin-top:14px;max-width:32em;font-size:1.08rem}
 .cta .btn.primary{background:#fff;color:#1A1230}
 .cta .btn.sec{color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3)}
-footer{display:flex;justify-content:space-between;align-items:flex-start;gap:32px;flex-wrap:wrap;padding-block:48px 56px;color:var(--muted);font-size:14px}
+footer{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding-block:40px 48px;color:var(--muted);font-size:14px;border-top:1px solid var(--line)}
 .fcol{display:flex;flex-direction:column;gap:10px}
 .flinks{display:flex;gap:48px;flex-wrap:wrap}
 .flinks div{display:flex;flex-direction:column;gap:8px}
@@ -375,6 +393,7 @@ a.lnk{color:inherit;text-decoration:none;cursor:pointer}
   <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></symbol>
   <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
   <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 20V9m-5 5 5-5 5 5M5 4h14"/></symbol>
+  <symbol id="i-headphones" viewBox="0 0 24 24"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1v-6h3zM3 19a2 2 0 0 0 2 2h1v-6H3z"/></symbol>
   <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></symbol>
   <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M11 18h2"/></symbol>
   <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 3 5 13h6l-1 8 8-10h-6z"/></symbol>
@@ -401,24 +420,14 @@ a.lnk{color:inherit;text-decoration:none;cursor:pointer}
 <main class="wrap" id="top">
   <header class="hero">
     <div>
-      <a class="pill glass lnk" href="/app"><b>NEW</b>The reader made for India · free</a>
       <h1>Read anything.<br><span class="grad-text">Remember everything.</span></h1>
-      <p class="lede">An e-reader for your phone and laptop. Highlight as you read, look up any word in Hindi or English, and save the lines that matter as cards.</p>
+      <p class="lede">A simple reader for your EPUB and PDF books. Free, on any device.</p>
       <div class="ctas">
-        <a class="btn primary" href="/app"><span class="dot"></span>Start reading free</a>
-        <a class="btn sec glass" href="#exam">See cards<svg class="i"><use href="#i-arrow"/></svg></a>
-      </div>
-      <div class="trust">
-        <a class="chip glass lnk" href="#library"><svg class="i"><use href="#i-file"/></svg>EPUB &amp; PDF</a>
-        <a class="chip glass lnk" href="/app"><svg class="i"><use href="#i-phone"/></svg>Installs like an app</a>
-        <a class="chip glass lnk" href="#hindi"><svg class="i"><use href="#i-lang"/></svg>Hindi + English</a>
+        <a class="btn primary big" href="/app"><span class="dot"></span>Start reading</a>
       </div>
     </div>
 
     <div class="stage">
-      <a class="float glass f1 lnk" href="/app"><span class="ic"><svg class="i"><use href="#i-flame"/></svg></span><div><b>12-day streak</b><small>Keep it going</small></div></a>
-      <a class="float glass f2 lnk" href="#exam" id="dueChip"><span class="ic"><svg class="i"><use href="#i-cards"/></svg></span><div><b id="dueTxt">64 cards</b><small id="dueSub">saved</small></div></a>
-      <a class="float glass f3 lnk" href="#hindi"><span class="ic"><svg class="i"><use href="#i-lang"/></svg></span><div><b class="deva">भावना</b><small>emotion · noun</small></div></a>
 
       <div class="phone" aria-label="Pathak app preview">
         <div class="screen" id="screen" data-rt="paper">
@@ -437,7 +446,7 @@ a.lnk{color:inherit;text-decoration:none;cursor:pointer}
           </div>
           <div class="botbar">
             <div class="prog"><i></i></div>
-            <div class="binfo"><span>Loc 1,204</span><span>12 min left in chapter</span><span>38%</span></div>
+            <div class="binfo"><span></span><span>12 min left</span><span>38%</span></div>
             <div class="brow">
               <div class="sw" role="group" aria-label="Reading theme">
                 <button type="button" data-t="paper" aria-pressed="true" aria-label="Paper theme"></button>
@@ -460,171 +469,28 @@ a.lnk{color:inherit;text-decoration:none;cursor:pointer}
     </div>
   </header>
 
-  <section id="features">
-    <div class="shead">
-      <span class="eyebrow"><span class="tick"></span>Everything you need to read</span>
-      <h2>All the reading tools.<br>None of the hardware.</h2>
-      <p class="lead">Works in any browser. Add it to your home screen and it opens like an app.</p>
-    </div>
-    <div class="bento">
-      <a href="/app#/cards" class="lnk tile glass t-a">
-        <span class="tic"><svg class="i"><use href="#i-pen"/></svg></span>
-        <h3>Highlights and notes</h3>
-        <p>Pick a colour and it’s saved to your Cards, with an optional note.</p>
-        <div class="vis hls">
-          <div class="colors"><i style="--c:#FFD43B"></i><i style="--c:#FF6B9A"></i><i style="--c:#5BC0EB"></i><i style="--c:#7EE081"></i></div>
-          <div class="hlc" style="--c:#FFD43B">To Sherlock Holmes she is always the woman.<small>The Adventures of Sherlock Holmes · Note: Irene Adler</small></div>
-          <div class="hlc deva" style="--c:#FF6B9A;font-family:var(--f-deva-read);font-size:16px">पोथी पढ़ि पढ़ि जग मुआ, पंडित भया न कोय।<small style="font-family:var(--f-body)">Kabir ke Dohe</small></div>
-          <div class="hlc" style="--c:#5BC0EB">The Ganga rises at the Gangotri Glacier in Uttarakhand.<small>Geography notes · p. 42</small></div>
-        </div>
-      <svg class="i go" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-      <a href="/app" class="lnk tile glass t-b">
-        <span class="tic"><svg class="i"><use href="#i-lang"/></svg></span>
-        <h3>Tap any word, get the meaning</h3>
-        <p>English and Hindi, both ways.</p>
-        <div class="vis dict"><div><span class="w">curious</span><p style="font-size:13px;margin-top:2px">adj · eager to know or learn</p></div><span class="deva">जिज्ञासु</span></div>
-      <svg class="i go" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-      <a href="/app" class="lnk tile glass">
-        <span class="tic"><svg class="i"><use href="#i-clock"/></svg></span>
-        <h3>Know where you are</h3>
-        <div class="vis ring">
-          <svg viewBox="0 0 84 84" aria-hidden="true"><circle class="bgc" cx="42" cy="42" r="36"/><circle class="fg" cx="42" cy="42" r="36"/></svg>
-          <div><b>38%</b><small>12 min left in chapter</small></div>
-        </div>
-      <svg class="i go" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-      <a href="/app" class="lnk tile glass">
-        <span class="tic"><svg class="i"><use href="#i-moon"/></svg></span>
-        <h3>Easy on the eyes</h3>
-        <div class="vis themes"><span style="background:var(--rd-paper-bg);color:var(--rd-paper-fg)">Aa</span><span style="background:var(--rd-sepia-bg);color:var(--rd-sepia-fg)">Aa</span><span style="background:var(--rd-night-bg);color:var(--rd-night-fg)">Aa</span></div>
-      <svg class="i go" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-      <a href="/app" class="lnk tile glass t-e">
-        <span class="tic"><svg class="i"><use href="#i-sync"/></svg></span>
-        <h3>Start on the laptop, finish on the phone</h3>
-        <p>Pick up exactly where you stopped, on any screen.</p>
-        <div class="vis devs"><div class="dv lap"><i></i></div><div class="dv tab"><i></i></div><div class="dv ph"><i></i></div><span class="syncl"><i></i>Synced just now</span></div>
-      <svg class="i go" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-      <a href="/app" class="lnk tile glass t-f">
-        <span class="tic"><svg class="i"><use href="#i-file"/></svg></span>
-        <h3>EPUB and PDF, both done right</h3>
-        <p>Reflowing text for EPUB. Sharp zoom for PDF.</p>
-        <div class="vis files"><div class="file" style="--c:var(--a1)">EPUB</div><div class="file" style="--c:var(--a3)">PDF</div><div class="drop">Drop a file here to start</div></div>
-      <svg class="i go" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+  <section id="features" class="simple">
+    <div class="feats">
+      <a class="feat" href="/app"><span class="fi"><svg class="i"><use href="#i-book"/></svg></span><b>Read</b><span>EPUB &amp; PDF, paper or night page</span></a>
+      <a class="feat" href="/app#/cards"><span class="fi"><svg class="i"><use href="#i-pen"/></svg></span><b>Save</b><span>Tap a line, keep it as a card</span></a>
+      <a class="feat" href="/app"><span class="fi"><svg class="i"><use href="#i-lang"/></svg></span><b>Understand</b><span>Any word, in Hindi or English</span></a>
+      <a class="feat" href="/app"><span class="fi"><svg class="i"><use href="#i-headphones"/></svg></span><b>Listen</b><span>Have any page read aloud</span></a>
     </div>
   </section>
 
-  <section id="hindi">
-    <div class="hindi">
-      <div>
-        <div class="shead" style="margin-bottom:0">
-          <span class="eyebrow"><span class="tick"></span>Hindi first</span>
-          <h2>Devanagari that looks like a real book</h2>
-          <p class="lead">Proper fonts and spacing for Indian scripts, and a dictionary that speaks both languages.</p>
-        </div>
-        <div class="marquee" aria-label="Languages">
-          <div class="track">
-            <span class="lg glass"><span class="s deva">हिन्दी</span>Hindi<em class="on">Live</em></span>
-            <span class="lg glass"><span class="s">Aa</span>English<em class="on">Live</em></span>
-            <span class="lg glass"><span class="s deva">मराठी</span>Marathi<em>Next</em></span>
-            <span class="lg glass"><span class="s">বাংলা</span>Bengali<em>Next</em></span>
-            <span class="lg glass"><span class="s">தமிழ்</span>Tamil<em>Soon</em></span>
-            <span class="lg glass"><span class="s">తెలుగు</span>Telugu<em>Soon</em></span>
-            <span class="lg glass"><span class="s">ગુજરાતી</span>Gujarati<em>Soon</em></span>
-            <span class="lg glass" aria-hidden="true"><span class="s deva">हिन्दी</span>Hindi<em class="on">Live</em></span>
-            <span class="lg glass" aria-hidden="true"><span class="s">Aa</span>English<em class="on">Live</em></span>
-            <span class="lg glass" aria-hidden="true"><span class="s deva">मराठी</span>Marathi<em>Next</em></span>
-            <span class="lg glass" aria-hidden="true"><span class="s">বাংলা</span>Bengali<em>Next</em></span>
-            <span class="lg glass" aria-hidden="true"><span class="s">தமிழ்</span>Tamil<em>Soon</em></span>
-            <span class="lg glass" aria-hidden="true"><span class="s">తెలుగు</span>Telugu<em>Soon</em></span>
-            <span class="lg glass" aria-hidden="true"><span class="s">ગુજરાતી</span>Gujarati<em>Soon</em></span>
-          </div>
-        </div>
-      </div>
-      <div class="bookpage glass">
-        <div class="tog" role="group" aria-label="Book language">
-          <button type="button" data-l="hi" aria-pressed="true">हिन्दी</button>
-          <button type="button" data-l="en" aria-pressed="false">English</button>
-        </div>
-        <p class="bp-text hi" id="bpText">पोथी पढ़ि पढ़ि जग मुआ, पंडित भया न कोय।<br><mark>ढाई आखर प्रेम का</mark>, पढ़े सो पंडित होय॥</p>
-        <div class="bp-foot"><span id="bpSrc">कबीर के दोहे</span><span>Tap to switch</span></div>
-      </div>
-    </div>
-  </section>
-
-  <section id="exam">
-    <div class="shead">
-      <span class="eyebrow"><span class="tick"></span>Cards</span>
-      <h2>Collect the lines that <span class="grad-text">matter</span></h2>
-      <p class="lead">Save any sentence or section as a card. The best passages from every book, in one place.</p>
-    </div>
-    <div class="exam">
-      <div>
-        <div class="steps">
-          <a class="step glass lnk" href="/app#/cards"><span class="n">1</span><div><h3>Select a line or a section</h3><p>A sentence, a paragraph, or a whole passage.</p></div><svg class="i go" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-          <a class="step glass lnk" href="/app#/cards"><span class="n">2</span><div><h3>Tap Card</h3><p>It’s saved with the book, chapter and a link back to the page.</p></div><svg class="i go" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-          <a class="step glass lnk" href="/app#/cards"><span class="n">3</span><div><h3>Come back anytime</h3><p>Search your cards, add a note, copy, or share one as an image.</p></div><svg class="i go" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-        </div>
-        <a class="step glass lnk" href="/app" style="display:block;margin-top:12px">
-          <div class="streak"><span>Reading streak</span><span><b>12 days</b> · last 21 weeks</span></div>
-          <div class="heat" id="heat" aria-label="Reading activity heatmap"></div>
-        </a>
-      </div>
-      <div class="deck glass" aria-label="Card collection preview">
-        <div class="deckhead">
-          <b>Your cards</b>
-          <div class="due"><span><b id="cNum">1</b> of <b id="cTot">4</b></span></div>
-        </div>
-        <div class="qcard" id="qcard">
-          <span class="qtag" id="qTag"></span>
-          <p class="qq qquote" id="qQ"></p>
-          <p class="qa" id="qA" hidden></p>
-          <span class="qsrc" id="qSrc"></span>
-        </div>
-        <div class="grade" id="cardNav">
-          <button type="button" data-n="prev">Previous</button>
-          <button type="button" data-n="copy">Copy</button>
-          <button type="button" data-n="next">Next</button>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section id="library">
-    <div class="shead">
-      <span class="eyebrow"><span class="tick"></span>Where books come from</span>
-      <h2>Plenty to read. All of it legal.</h2>
-      <p class="lead">Bring your own DRM-free files, or start with these free libraries.</p>
-    </div>
-    <div class="srcs">
-      <a class="src glass lnk" href="/app"><span class="mono-l" style="--c:linear-gradient(135deg,var(--a2),var(--a3))"><svg class="i"><use href="#i-file"/></svg></span><div><h3>Your own files</h3><p>Any EPUB or PDF without copy protection.</p><span class="tg">Open app</span></div><svg class="i go" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-      <a class="src glass lnk" href="https://ncert.nic.in/textbook.php" target="_blank" rel="noopener"><span class="mono-l" style="--c:linear-gradient(135deg,#FF8A1F,#F25C05)">N</span><div><h3>NCERT textbooks</h3><p>School textbooks in Hindi and English.</p><span class="tg">ncert.nic.in</span></div><svg class="i go" aria-hidden="true"><use href="#i-ext"/></svg></a>
-      <a class="src glass lnk" href="https://www.gutenberg.org" target="_blank" rel="noopener"><span class="mono-l" style="--c:linear-gradient(135deg,#1F9D8A,#0E7C86)">G</span><div><h3>Project Gutenberg</h3><p>Over 70,000 free classics.</p><span class="tg">gutenberg.org</span></div><svg class="i go" aria-hidden="true"><use href="#i-ext"/></svg></a>
-      <a class="src glass lnk" href="https://standardebooks.org" target="_blank" rel="noopener"><span class="mono-l" style="--c:linear-gradient(135deg,#3B82F6,#6366F1)">S</span><div><h3>Standard Ebooks</h3><p>Beautifully edited classics.</p><span class="tg">standardebooks.org</span></div><svg class="i go" aria-hidden="true"><use href="#i-ext"/></svg></a>
-      <a class="src glass lnk" href="https://openlibrary.org" target="_blank" rel="noopener"><span class="mono-l" style="--c:linear-gradient(135deg,#8B5CF6,#C026D3)">O</span><div><h3>Open Library</h3><p>Borrow from the Internet Archive.</p><span class="tg">openlibrary.org</span></div><svg class="i go" aria-hidden="true"><use href="#i-ext"/></svg></a>
-      <a class="src glass lnk" href="https://archive.org/details/digitallibraryindia" target="_blank" rel="noopener"><span class="mono-l deva" style="--c:linear-gradient(135deg,#E11D48,#F97316);font-family:var(--f-deva)">प्रे</span><div><h3>Hindi classics</h3><p>Thousands of Hindi books as free PDFs.</p><span class="tg">archive.org</span></div><svg class="i go" aria-hidden="true"><use href="#i-ext"/></svg></a>
-    </div>
-    <a class="info glass lnk" href="/app"><svg class="i"><use href="#i-upload"/></svg><p><b>Already have a book file?</b> Open Pathak and drop it in. It reads any EPUB or PDF.</p><svg class="i go" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-  </section>
-
-  <section id="start" style="padding-bottom:0">
-    <div class="cta">
-      <div>
-        <h2>Open your first book in under a minute</h2>
-        <p>No device, no subscription.</p>
-      </div>
-      <div class="ctas" style="margin-top:0">
-        <a class="btn primary" href="/app">Start reading free<svg class="i"><use href="#i-arrow"/></svg></a>
-        <a class="btn sec" href="#library">Where to find books</a>
-      </div>
+  <section id="library" class="simple">
+    <p class="free-lbl">Free books to start with</p>
+    <div class="free-row">
+      <a href="https://www.gutenberg.org" target="_blank" rel="noopener">Project Gutenberg</a>
+      <a href="https://standardebooks.org" target="_blank" rel="noopener">Standard Ebooks</a>
+      <a href="https://ncert.nic.in/textbook.php" target="_blank" rel="noopener">NCERT</a>
+      <a href="https://openlibrary.org" target="_blank" rel="noopener">Open Library</a>
     </div>
   </section>
 
   <footer>
-    <div class="fcol"><a class="brand" href="#top"><span class="logo">प</span>Pathak</a><span>Made in India · EPUB &amp; PDF reader</span></div>
-    <nav class="flinks" aria-label="Footer">
-      <div><b>App</b><a href="/app">Library</a><a href="/app#/cards">Cards</a></div>
-      <div><b>Explore</b><a href="#features">Features</a><a href="#hindi">Hindi</a><a href="#exam">Cards</a><a href="#library">Free books</a></div>
-      <div><b>Free books</b><a href="https://www.gutenberg.org" target="_blank" rel="noopener">Project Gutenberg</a><a href="https://standardebooks.org" target="_blank" rel="noopener">Standard Ebooks</a><a href="https://ncert.nic.in/textbook.php" target="_blank" rel="noopener">NCERT</a></div>
-    </nav>
+    <a class="brand" href="#top"><span class="logo">प</span>Pathak</a>
+    <span>Made in India</span>
   </footer>
 </main>
 
@@ -661,58 +527,14 @@ a.lnk{color:inherit;text-decoration:none;cursor:pointer}
   $('closeSheet').addEventListener('click',function(){setSheet(false)});
   screen.addEventListener('click',function(e){if(sheet.classList.contains('open')&&!sheet.contains(e.target)&&e.target.id!=='w')setSheet(false)});
 
-  var due=64,tt;
+  var tt;
   function toast(msg){
     $('toastTxt').textContent=msg;var t=$('toast');t.classList.add('show');
     clearTimeout(tt);tt=setTimeout(function(){t.classList.remove('show')},1900);
-    due++;$('dueTxt').textContent=due+' cards';$('dueSub').textContent='1 just saved';
-    var c=$('dueChip');c.classList.remove('bump');void c.offsetWidth;c.classList.add('bump');
   }
   $('mk').addEventListener('click',function(){toast('Saved to Cards')});
   $('addWord').addEventListener('click',function(){setSheet(false);toast('“emotion” saved to Cards')});
 
-  var texts={
-    hi:{t:'पोथी पढ़ि पढ़ि जग मुआ, पंडित भया न कोय।<br><mark>ढाई आखर प्रेम का</mark>, पढ़े सो पंडित होय॥',s:'कबीर के दोहे'},
-    en:{t:'The world died reading thick books, and no one became wise. Whoever reads <mark>the two and a half letters of love</mark> becomes truly learned.',s:'Kabir’s couplets · translation'}
-  };
-  document.querySelectorAll('.tog button').forEach(function(b){
-    b.addEventListener('click',function(){
-      var l=b.dataset.l,p=$('bpText');p.innerHTML=texts[l].t;p.className='bp-text '+l;$('bpSrc').textContent=texts[l].s;
-      document.querySelectorAll('.tog button').forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});
-    });
-  });
-
-  var heat=$('heat'),seed=7;
-  function rnd(){seed=(seed*9301+49297)%233280;return seed/233280}
-  for(var i=0;i<147;i++){var c=document.createElement('i');var r=rnd();var l=i>134?3:(r>.82?3:r>.6?2:r>.38?1:0);c.setAttribute('data-l',l);heat.appendChild(c)}
-
-  var cards=[
-    {tag:'Fiction',q:'To Sherlock Holmes she is always the woman. I have seldom heard him mention her under any other name.',n:'Irene Adler, the only one who outwitted him.',s:'The Adventures of Sherlock Holmes · A Scandal in Bohemia'},
-    {tag:'Poetry',q:'धीरे-धीरे रे मना, धीरे सब कुछ होय। माली सींचे सौ घड़ा, ऋतु आए फल होय॥',n:'',s:'Kabir ke Dohe',hi:true},
-    {tag:'Notes',q:'The Ganga rises at the Gangotri Glacier in Uttarakhand.',n:'',s:'Geography notes · p. 42'},
-    {tag:'Fiction',q:'All emotions, and that one particularly, were abhorrent to his cold, precise but admirably balanced mind.',n:'',s:'The Adventures of Sherlock Holmes · A Scandal in Bohemia'}
-  ];
-  var idx=0;
-  $('cTot').textContent=cards.length;
-  function show(){
-    var c=cards[idx];
-    $('qTag').textContent=c.tag;$('qQ').textContent=c.q;$('qQ').style.fontFamily=c.hi?'var(--f-deva-read)':'';
-    $('qA').hidden=!c.n;$('qA').textContent=c.n;$('qSrc').textContent=c.s;$('cNum').textContent=idx+1;
-  }
-  $('cardNav').addEventListener('click',function(e){
-    var b=e.target.closest('button');if(!b)return;
-    if(b.dataset.n==='copy'){
-      var t=cards[idx].q;
-      try{navigator.clipboard.writeText(t).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1400)},function(){})}catch(err){}
-      return;
-    }
-    var qc=$('qcard');qc.classList.add('out');
-    setTimeout(function(){
-      idx=(idx+(b.dataset.n==='next'?1:cards.length-1))%cards.length;
-      show();qc.classList.remove('out');
-    },260);
-  });
-  show();
 })();
 </script>
 

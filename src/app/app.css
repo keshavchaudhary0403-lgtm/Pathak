@@ -501,3 +501,12 @@ a.stat{transition:transform .2s}
 .tts .main:hover{background:var(--grad);filter:brightness(1.08)}
 .tts .rate{width:auto;padding:0 12px;border-radius:999px;font:700 13px var(--f-body)}
 @media (max-width:420px){#reader .r-top{gap:6px}#reader .ib.sq{width:36px;height:36px}}
+
+/* simpler library */
+.free-line{margin-top:40px;font-size:14px;color:var(--muted)}
+.free-line a{color:var(--ink);font-weight:600;text-decoration:none}
+.free-line a:hover{color:var(--a2)}
+.continue{padding:16px}
+.continue .cv{width:72px}
+.continue h2{font-size:1.25rem}
+.lib-top.one + .section-title{margin-top:30px}
